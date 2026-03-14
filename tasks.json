@@ -264,7 +264,7 @@
         "Шаг 6: DELETE /api/groups/{id} — группа удалена, проекты свободны"
       ],
       "dependencies": ["TASK-008"],
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": "TASK-012",

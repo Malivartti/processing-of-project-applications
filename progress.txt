@@ -201,6 +201,29 @@
 
 ---
 
+## Итерация 9 — 2026-03-15
+**Фича:** TASK-011 — Groups API: CRUD для ручных и авто-групп
+**Статус:** Завершено
+**Что сделано:**
+- backend/app/schemas/group.py: GroupRead, GroupListItem, GroupCreate (validator min 2 projects), GroupUpdate, GroupListResponse, AddProjectToGroup, ConflictingProject, GroupProjectItem
+- backend/app/repositories/group.py: GroupRepo с get_all (фильтры по source/context/is_confirmed), get_by_id, get_projects_by_ids, create (flush + bulk update project group_id), update, delete (nullify project group_ids), confirm, add_project, remove_project
+- backend/app/services/group.py: GroupService — conflict check (409 с деталями конфликтующих проектов), бизнес-логика для всех операций
+- backend/app/api/groups.py: GET /api/groups, POST /api/groups, GET /api/groups/{id}, PATCH /api/groups/{id}, DELETE /api/groups/{id} (204), POST /api/groups/{id}/confirm, POST /api/groups/{id}/projects, DELETE /api/groups/{id}/projects/{project_id}
+- backend/app/main.py: include_router(groups_router)
+- tests/test_groups.py: 12 тестов — list, filters, create, min 2 projects (422), conflict (409), get, update, delete, confirm, add/remove project, not found
+- ruff OK, pytest 54 passed
+**Следующие шаги:**
+- TASK-013: Алгоритм авто-группировки (depends on TASK-011, TASK-012 — оба done)
+- TASK-010: Экспорт в Excel (depends on TASK-008 — done)
+**Заметки для следующей итерации:**
+- GroupRepo.create использует session.flush() для получения group.id до commit, затем bulk update Project.group_id
+- GroupRepo.delete использует bulk update Project.group_id=null перед удалением группы
+- ConflictError detail — dict с message + conflicting list (для совместимости с JSON-ответом FastAPI)
+- GroupCreate.project_ids валидируется @field_validator (min 2 projects → 422 от Pydantic)
+- TASK-013 теперь разблокирован (все его зависимости done)
+
+---
+
 ## Итерация 0 — Инициализация
 **Фича:** Настройка проекта
 **Статус:** Ожидает начала
