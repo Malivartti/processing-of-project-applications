@@ -60,6 +60,32 @@
 
 ---
 
+## Итерация 3 — 2026-03-15
+**Фича:** TASK-003 — ORM-модели SQLAlchemy и первая Alembic-миграция (все таблицы)
+**Статус:** Завершено
+**Что сделано:**
+- Добавлен pgvector (0.4.2) + numpy в зависимости (pyproject.toml + uv.lock)
+- backend/app/models.py: все 8 моделей с Mapped[] типами — Direction, PriorityDirection, TRLLevel, Group, Project, GroupingRun, SimilarityScore, RejectedPair
+- Python Enum-классы: ProjectSource, GroupSource, GroupContext, RunStatus
+- Project.embedding: Vector(312) через pgvector.sqlalchemy.Vector
+- GIN-индекс для full-text search по projects (to_tsvector russian) через sa.text() в __table_args__
+- UNIQUE constraint на (project_a_id, project_b_id) в SimilarityScore
+- FK constraints с ondelete для всех внешних ключей
+- Alembic инициализирован: alembic.ini + migrations/env.py (sync psycopg2 engine, settings.sync_database_url)
+- migrations/versions/001_initial.py: CREATE EXTENSION IF NOT EXISTS vector, все таблицы, ENUM-типы через postgresql.ENUM, GIN-индекс через op.execute, downgrade
+- ruff OK, pytest OK (1 passed)
+**Следующие шаги:**
+- TASK-004: Celery + Redis (зависит от TASK-002, теперь done)
+- TASK-007: Справочники API (зависит от TASK-003, теперь done)
+**Заметки для следующей итерации:**
+- Alembic env.py использует sync engine (psycopg2), не asyncpg
+- alembic upgrade head нужно запускать внутри docker compose exec backend
+- Миграция создаёт ENUM типы вручную через postgresql.ENUM(...).create() перед созданием таблиц
+- Vector(312) задаётся через ALTER TABLE после создания таблицы (placeholder Text → drop + add column)
+- Base и модели: app.database.Base импортируется в app.models; env.py делает import app.models для регистрации
+
+---
+
 ## Итерация 0 — Инициализация
 **Фича:** Настройка проекта
 **Статус:** Ожидает начала

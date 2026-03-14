@@ -82,7 +82,7 @@
         "Шаг 4: docker compose exec backend alembic downgrade -1 && alembic upgrade head — повторная применимость миграции"
       ],
       "dependencies": ["TASK-002"],
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": "TASK-004",
