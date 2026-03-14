@@ -1,0 +1,680 @@
+{
+  "agent_instructions": {
+    "before_start": [
+      "Прочитай этот файл и git log --oneline -20",
+      "Выбери ОДНУ задачу со статусом pending и наивысшим приоритетом",
+      "Проверь, что все dependencies этой задачи имеют статус done"
+    ],
+    "during_work": [
+      "Работай только над выбранной задачей",
+      "Делай коммиты после каждого логического изменения",
+      "Не трогай код, не связанный с текущей задачей"
+    ],
+    "before_finish": [
+      "Выполни ВСЕ test_steps из задачи",
+      "Меняй status на done ТОЛЬКО после успешного прохождения всех тестов",
+      "Напиши summary в progress.md",
+      "ЗАПРЕЩЕНО удалять или редактировать задачи — только менять status"
+    ]
+  },
+  "tasks": [
+    {
+      "id": "TASK-001",
+      "category": "infrastructure",
+      "priority": "critical",
+      "description": "Инициализация структуры монорепозитория и Docker Compose окружения",
+      "acceptance_criteria": [
+        "Папки backend/, frontend/, nginx/ созданы с нужной вложенностью согласно архитектуре",
+        "docker-compose.yml запускает сервисы: db (pgvector/pgvector:pg16), redis (redis:7-alpine), backend, celery-worker, frontend, nginx",
+        "Все сервисы имеют healthcheck и правильные depends_on",
+        ".env.example содержит все нужные переменные окружения",
+        "docker compose up --build завершается без ошибок, все сервисы healthy"
+      ],
+      "test_steps": [
+        "Шаг 1: docker compose up --build -d",
+        "Шаг 2: docker compose ps — все сервисы в состоянии running/healthy",
+        "Шаг 3: curl http://localhost:8000/health — ответ 200 OK",
+        "Шаг 4: curl http://localhost:5173 — фронтенд отдаёт HTML-страницу"
+      ],
+      "dependencies": [],
+      "status": "pending"
+    },
+    {
+      "id": "TASK-002",
+      "category": "infrastructure",
+      "priority": "critical",
+      "description": "Настройка FastAPI-приложения: конфиг, БД, базовые зависимости, health-endpoint",
+      "acceptance_criteria": [
+        "Инициализируется менеджер зависимостей uv",
+        "Структура backend/app/ создана: main.py, config.py, database.py, exceptions.py",
+        "Pydantic Settings читает переменные окружения из .env",
+        "AsyncEngine + async_sessionmaker сконфигурированы для asyncpg",
+        "Sync DATABASE_URL для Celery-воркера выводится автоматически из async URL",
+        "GET /health возвращает {status: ok, db: ok} — проверяет подключение к PostgreSQL",
+        "CORS-мидлвар настроен для фронтенд-хоста"
+      ],
+      "test_steps": [
+        "Шаг 1: docker compose up -d db backend",
+        "Шаг 2: curl http://localhost:8000/health — {status: 'ok', db: 'ok'}",
+        "Шаг 3: docker compose logs backend — нет ошибок импорта или подключения",
+        "Шаг 4: curl http://localhost:8000/docs — Swagger UI доступен"
+      ],
+      "dependencies": ["TASK-001"],
+      "status": "pending"
+    },
+    {
+      "id": "TASK-003",
+      "category": "infrastructure",
+      "priority": "critical",
+      "description": "ORM-модели SQLAlchemy и первая Alembic-миграция (все таблицы)",
+      "acceptance_criteria": [
+        "Созданы модели: Project (с VECTOR(312) через pgvector), Group, SimilarityScore, RejectedPair, GroupingRun, Direction, PriorityDirection, TRLLevel",
+        "Все ENUM-поля (source, context, status) определены через Python Enum",
+        "Alembic настроен (alembic.ini, env.py с async engine)",
+        "Миграция 001_initial содержит: CREATE EXTENSION IF NOT EXISTS vector, все таблицы, FK-constraints, UNIQUE constraint на (project_a_id, project_b_id) в similarity_scores",
+        "GIN-индекс для полнотекстового поиска по projects (to_tsvector russian)",
+        "alembic upgrade head выполняется без ошибок"
+      ],
+      "test_steps": [
+        "Шаг 1: docker compose exec backend alembic upgrade head",
+        "Шаг 2: docker compose exec db psql -U $POSTGRES_USER -d $POSTGRES_DB -c '\\dt' — все таблицы присутствуют",
+        "Шаг 3: docker compose exec db psql -U $POSTGRES_USER -d $POSTGRES_DB -c '\\dx' — расширение vector активно",
+        "Шаг 4: docker compose exec backend alembic downgrade -1 && alembic upgrade head — повторная применимость миграции"
+      ],
+      "dependencies": ["TASK-002"],
+      "status": "pending"
+    },
+    {
+      "id": "TASK-004",
+      "category": "infrastructure",
+      "priority": "critical",
+      "description": "Настройка Celery + Redis: celery_app, конфигурация, тестовая задача",
+      "acceptance_criteria": [
+        "backend/app/tasks/celery_app.py: Celery() instance с broker=redis и result_backend=redis",
+        "celery-worker контейнер запускается с prefork pool, concurrency=2",
+        "Тестовая задача tasks.ping() возвращает 'pong'",
+        "worker_init сигнал: заготовка для загрузки ML-модели (пока без самой модели)",
+        "Celery Flower (опционально) доступен на :5555 для мониторинга задач"
+      ],
+      "test_steps": [
+        "Шаг 1: docker compose up -d redis celery-worker",
+        "Шаг 2: docker compose exec backend python -c \"from app.tasks.celery_app import celery; r = celery.send_task('app.tasks.ping'); print(r.get(timeout=10))\" — вывод 'pong'",
+        "Шаг 3: docker compose logs celery-worker — нет ошибок запуска"
+      ],
+      "dependencies": ["TASK-002"],
+      "status": "pending"
+    },
+    {
+      "id": "TASK-005",
+      "category": "infrastructure",
+      "priority": "high",
+      "description": "Nginx конфигурация: reverse proxy для API и фронтенда, IP-фильтрация",
+      "acceptance_criteria": [
+        "nginx.conf: /api/* → backend:8000, / → frontend:5173 (dev) или static files (prod)",
+        "Настроен proxy_read_timeout 300s для длинных запросов (импорт, группировка)",
+        "Заготовка для IP allow/deny (allow 10.0.0.0/8; deny all)",
+        "HTTPS-конфигурация — заглушка с самоподписанным сертификатом для dev",
+        "curl http://localhost/api/health через Nginx отдаёт 200"
+      ],
+      "test_steps": [
+        "Шаг 1: docker compose up -d nginx",
+        "Шаг 2: curl http://localhost/api/health — 200 OK",
+        "Шаг 3: curl http://localhost/ — HTML-страница фронтенда",
+        "Шаг 4: docker compose logs nginx — нет ошибок конфигурации"
+      ],
+      "dependencies": ["TASK-001", "TASK-002"],
+      "status": "pending"
+    },
+    {
+      "id": "TASK-006",
+      "category": "infrastructure",
+      "priority": "high",
+      "description": "Инициализация Vue 3 фронтенда: Vite, TypeScript, Pinia, Vue Router, Axios, UI-библиотека",
+      "acceptance_criteria": [
+        "Проект создан через Vite (vue + ts), установлены: pinia, vue-router, axios, element-plus",
+        "Структура src/: api/, stores/, router/, views/, components/, composables/, utils/ создана (пустые index.ts)",
+        "Vue Router: 4 маршрута (/projects, /selection, /history, /dictionaries)",
+        "App.vue: навигационные табы (4 вкладки) + <router-view>",
+        "Axios instance в api/client.ts: baseURL из env, перехватчик ошибок с toast-уведомлением",
+        "vite.config.ts: proxy /api → http://backend:8000"
+      ],
+      "test_steps": [
+        "Шаг 1: docker compose up -d frontend",
+        "Шаг 2: открыть http://localhost:5173 — страница с 4 вкладками навигации",
+        "Шаг 3: переключение между вкладками — URL меняется, контент перерисовывается без reload",
+        "Шаг 4: в консоли браузера нет ошибок"
+      ],
+      "dependencies": ["TASK-001"],
+      "status": "pending"
+    },
+    {
+      "id": "TASK-007",
+      "category": "functional",
+      "priority": "critical",
+      "description": "Справочники: API CRUD для directions, priority_directions, trl_levels",
+      "acceptance_criteria": [
+        "Repository: DictionaryRepo с методами get_all, get_active, create, update, deactivate",
+        "Service: DictionaryService — бизнес-логика деактивации (не удалять, только is_active=false)",
+        "API роутер /api/dictionaries/{type}: GET (все/активные), POST, PATCH /{id}, DELETE /{id} (деактивация)",
+        "Pydantic-схемы: DictionaryItemRead, DictionaryItemCreate, DictionaryItemUpdate",
+        "Начальные данные: seed-скрипт или Alembic data migration с 5-7 значениями каждого справочника",
+        "Деактивированные значения не возвращаются в GET ?active_only=true"
+      ],
+      "test_steps": [
+        "Шаг 1: GET /api/dictionaries/directions — список направлений",
+        "Шаг 2: POST /api/dictionaries/directions {name: 'Тест'} — создан, id в ответе",
+        "Шаг 3: DELETE /api/dictionaries/directions/{id} — 204, значение деактивировано",
+        "Шаг 4: GET /api/dictionaries/directions?active_only=true — деактивированное значение не возвращается",
+        "Шаг 5: проект с деактивированным direction_id — направление всё ещё видно в карточке проекта"
+      ],
+      "dependencies": ["TASK-003"],
+      "status": "pending"
+    },
+    {
+      "id": "TASK-008",
+      "category": "functional",
+      "priority": "critical",
+      "description": "Projects API: CRUD-эндпоинты и репозиторий",
+      "acceptance_criteria": [
+        "Repository: ProjectRepo с методами get_by_id, get_list (с фильтрами и пагинацией), create, update, delete, set_selected",
+        "Service: ProjectService — валидация бизнес-правил",
+        "GET /api/projects: пагинация (limit, offset), фильтры (direction_id, priority_direction_id, trl_id, is_ongoing, has_group, group_source), полнотекстовый поиск через PostgreSQL tsvector",
+        "GET /api/projects/{id}: полные данные + информация о группе",
+        "POST /api/projects/{id}/select и DELETE /api/projects/{id}/select",
+        "GET /api/stats/counters: total, new (is_auto_checked=false), auto_checked",
+        "Все ответы через Pydantic-схемы ProjectRead, ProjectListItem"
+      ],
+      "test_steps": [
+        "Шаг 1: добавить 3 тестовых проекта напрямую в БД",
+        "Шаг 2: GET /api/projects — список из 3 проектов с пагинацией",
+        "Шаг 3: GET /api/projects?search=тест — фильтрует по полнотекстовому поиску",
+        "Шаг 4: GET /api/projects?direction_id={id} — фильтрует по направлению",
+        "Шаг 5: POST /api/projects/{id}/select — is_selected=true в ответе",
+        "Шаг 6: GET /api/stats/counters — корректные счётчики"
+      ],
+      "dependencies": ["TASK-003", "TASK-007"],
+      "status": "pending"
+    },
+    {
+      "id": "TASK-009",
+      "category": "functional",
+      "priority": "critical",
+      "description": "Импорт проектов из Excel (.xlsx) с валидацией",
+      "acceptance_criteria": [
+        "GET /api/projects/template — скачивает Excel-шаблон с нужными колонками и примером строки",
+        "POST /api/projects/import (multipart/form-data): парсинг openpyxl, валидация каждой строки",
+        "Валидация: обязательные поля, соответствие значений справочникам, уникальность title в цикле",
+        "Ответ preview: {valid_count, error_count, errors: [{row, field, message}], duplicates: [title]}",
+        "POST /api/projects/import?confirm=true — фактический импорт после preview",
+        "Дубликаты по названию — предупреждение (warnings), не блокировка",
+        "Импорт 1500 строк — ≤30 секунд (эмбеддинги — отдельная фоновая задача)"
+      ],
+      "test_steps": [
+        "Шаг 1: GET /api/projects/template — скачивается .xlsx файл",
+        "Шаг 2: POST /api/projects/import с корректным файлом 10 строк — preview показывает 10 valid_count",
+        "Шаг 3: POST /api/projects/import с файлом с ошибками — errors содержат номер строки и поле",
+        "Шаг 4: POST /api/projects/import?confirm=true — проекты появляются в БД",
+        "Шаг 5: GET /api/projects — count соответствует количеству импортированных"
+      ],
+      "dependencies": ["TASK-008"],
+      "status": "pending"
+    },
+    {
+      "id": "TASK-010",
+      "category": "functional",
+      "priority": "high",
+      "description": "Экспорт проектов в Excel (.xlsx) — все варианты фильтрации",
+      "acceptance_criteria": [
+        "GET /api/projects/export: query params — context (all/filtered/selected/grouped), фильтры те же что у GET /api/projects",
+        "Excel-файл содержит все поля проекта + колонку 'Группа' (название) + колонку 'Score' (avg_score группы)",
+        "Файл скачивается с Content-Disposition: attachment; filename=projects_export.xlsx",
+        "Экспорт 1500 строк — ≤10 секунд",
+        "Экспорт отфильтрованного набора (с теми же фильтрами что в GET /api/projects)"
+      ],
+      "test_steps": [
+        "Шаг 1: GET /api/projects/export — скачивается .xlsx",
+        "Шаг 2: открыть в Excel — все ожидаемые колонки, нет пустых строк",
+        "Шаг 3: GET /api/projects/export?context=selected — только отобранные проекты",
+        "Шаг 4: GET /api/projects/export?context=grouped — только проекты в группах, столбцы Группа и Score заполнены"
+      ],
+      "dependencies": ["TASK-008"],
+      "status": "pending"
+    },
+    {
+      "id": "TASK-011",
+      "category": "functional",
+      "priority": "high",
+      "description": "Groups API: CRUD для ручных и авто-групп",
+      "acceptance_criteria": [
+        "Repository: GroupRepo с методами get_all (с фильтрами по source, context, is_confirmed), get_with_projects, create, update, delete",
+        "POST /api/groups: создание ручной группы (name, description, project_ids — минимум 2)",
+        "Проверка: проект не может быть в двух группах одновременно — ответ 409 с конфликтующими проектами",
+        "PATCH /api/groups/{id}: изменение name, description",
+        "DELETE /api/groups/{id}: удаление группы, все проекты получают group_id=null",
+        "POST /api/groups/{id}/confirm: is_confirmed=true (необратимо, но группу можно удалить)",
+        "POST /api/groups/{id}/projects: добавить проект в группу",
+        "DELETE /api/groups/{id}/projects/{project_id}: убрать проект из группы"
+      ],
+      "test_steps": [
+        "Шаг 1: POST /api/groups {name: 'Тест', project_ids: [id1, id2]} — группа создана",
+        "Шаг 2: GET /api/groups — список групп с is_confirmed=false",
+        "Шаг 3: POST /api/groups/{id}/projects {project_id: id3} — проект добавлен",
+        "Шаг 4: DELETE /api/groups/{id}/projects/{id3} — проект убран из группы",
+        "Шаг 5: POST /api/groups/{id}/confirm — is_confirmed=true",
+        "Шаг 6: DELETE /api/groups/{id} — группа удалена, проекты свободны"
+      ],
+      "dependencies": ["TASK-008"],
+      "status": "pending"
+    },
+    {
+      "id": "TASK-012",
+      "category": "integration",
+      "priority": "critical",
+      "description": "ML: интеграция rubert-tiny2 через sentence-transformers в Celery-воркере",
+      "acceptance_criteria": [
+        "Dockerfile для backend содержит установку sentence-transformers, scikit-learn, pymorphy3",
+        "Модель cointegrated/rubert-tiny2 загружается при старте Celery-воркера через worker_init",
+        "EmbeddingService: метод encode(texts: list[str]) → np.ndarray (312-мерные векторы)",
+        "Предобработка текста в TextProcessingUtils: конкатенация полей (title + problem + goal + expected_result), нижний регистр, удаление лишних символов",
+        "Задача Celery: bulk_generate_embeddings(project_ids) — вычисляет и сохраняет эмбеддинги в БД",
+        "После импорта проектов автоматически запускается bulk_generate_embeddings для новых проектов"
+      ],
+      "test_steps": [
+        "Шаг 1: docker compose exec celery-worker python -c \"from app.tasks.celery_app import get_embedding_model; m = get_embedding_model(); print(m)\" — модель загружена",
+        "Шаг 2: вызвать bulk_generate_embeddings для 3 тестовых проектов",
+        "Шаг 3: проверить в БД: SELECT id, embedding IS NOT NULL FROM projects — embedding заполнен",
+        "Шаг 4: docker compose stats celery-worker — потребление RAM ≤ 1 GB"
+      ],
+      "dependencies": ["TASK-004", "TASK-008"],
+      "status": "pending"
+    },
+    {
+      "id": "TASK-013",
+      "category": "functional",
+      "priority": "critical",
+      "description": "Алгоритм авто-группировки: cosine similarity + agglomerative clustering",
+      "acceptance_criteria": [
+        "ClusteringService: cosine_similarity_matrix(embeddings) → матрица парного сходства через scikit-learn",
+        "ClusteringService: cluster(matrix, threshold) → список групп проектов (agglomerative clustering с distance_threshold)",
+        "Отклонённые пары (rejected_pairs таблица) исключаются из матрицы до кластеризации",
+        "Результат кластеризации сохраняется: создаются записи в groups (source='auto'), similarity_scores, обновляется group_id у проектов",
+        "Старые непроверенные авто-группы (is_confirmed=false) для данного контекста заменяются новыми",
+        "Ручные группы и подтверждённые авто-группы НЕ затрагиваются"
+      ],
+      "test_steps": [
+        "Шаг 1: загрузить 10 тестовых проектов, 3 пары семантически близких",
+        "Шаг 2: убедиться, что у всех проектов есть эмбеддинги",
+        "Шаг 3: вызвать run_auto_grouping напрямую с threshold=0.75",
+        "Шаг 4: GET /api/groups?source=auto — близкие проекты объединены в группы",
+        "Шаг 5: повторный запуск — непроверенные авто-группы заменены, ручные группы не тронуты"
+      ],
+      "dependencies": ["TASK-011", "TASK-012"],
+      "status": "pending"
+    },
+    {
+      "id": "TASK-014",
+      "category": "functional",
+      "priority": "critical",
+      "description": "Celery-задача авто-группировки с отслеживанием прогресса через Redis",
+      "acceptance_criteria": [
+        "Задача run_auto_grouping(run_id, threshold, context) создаёт запись в grouping_runs, обновляет прогресс в Redis HASH grouping:progress:{run_id}",
+        "Поля прогресса: stage (embeddings/similarity/clustering/saving/done), current, total",
+        "POST /api/grouping/run: проверяет, нет ли уже запущенного процесса (Redis lock), создаёт задачу, возвращает run_id",
+        "GET /api/grouping/status/{run_id}: читает из Redis HASH, возвращает структуру прогресса",
+        "При завершении: grouping_runs.status = 'completed', TTL на Redis ключ = 1 час",
+        "При ошибке: grouping_runs.status = 'failed', error_message в Redis"
+      ],
+      "test_steps": [
+        "Шаг 1: POST /api/grouping/run {threshold: 0.75, context: 'main'} — ответ {run_id: '...'}",
+        "Шаг 2: GET /api/grouping/status/{run_id} несколько раз — stage прогрессирует от 'embeddings' к 'done'",
+        "Шаг 3: GET /api/grouping/history — запись появилась с корректной статистикой",
+        "Шаг 4: попытка запустить второй раз пока первый работает — ответ 409"
+      ],
+      "dependencies": ["TASK-013"],
+      "status": "pending"
+    },
+    {
+      "id": "TASK-015",
+      "category": "functional",
+      "priority": "high",
+      "description": "Отклонение рекомендаций: rejected_pairs и учёт при повторной группировке",
+      "acceptance_criteria": [
+        "При удалении проекта из авто-группы (DELETE /api/groups/{id}/projects/{project_id}): все пары этого проекта с другими проектами группы сохраняются в rejected_pairs",
+        "При удалении авто-группы целиком: все внутригрупповые пары сохраняются в rejected_pairs",
+        "При кластеризации: rejected_pairs для текущего cycle исключаются из рассмотрения",
+        "Ручное добавление тех же проектов в ручную группу НЕ блокируется rejected_pairs",
+        "GET /api/grouping/history: поле confirmed_rate = confirmed_groups / total_auto_groups"
+      ],
+      "test_steps": [
+        "Шаг 1: запустить авто-группировку, получить группу из проектов A и B",
+        "Шаг 2: DELETE /api/groups/{id}/projects/{project_B_id} — B убрана из группы",
+        "Шаг 3: проверить rejected_pairs — запись (A, B) присутствует",
+        "Шаг 4: запустить авто-группировку повторно — A и B не объединяются снова",
+        "Шаг 5: создать ручную группу с A и B — успешно, без блокировки"
+      ],
+      "dependencies": ["TASK-014"],
+      "status": "pending"
+    },
+    {
+      "id": "TASK-016",
+      "category": "functional",
+      "priority": "high",
+      "description": "Сравнение двух проектов side-by-side с подсветкой ключевых слов",
+      "acceptance_criteria": [
+        "GET /api/projects/compare?a={id}&b={id}: возвращает поля обоих проектов + score сходства + список общих ключевых слов",
+        "Ключевые слова: пересечение значимых слов после лемматизации pymorphy3 (только существительные и глаголы длиннее 3 символов, без стоп-слов)",
+        "Score берётся из similarity_scores если пара существует, иначе вычисляется on-the-fly",
+        "Если эмбеддинги не вычислены — score = null, keywords = []"
+      ],
+      "test_steps": [
+        "Шаг 1: GET /api/projects/compare?a={id1}&b={id2} для двух похожих проектов",
+        "Шаг 2: ответ содержит project_a, project_b, score (число 0-1), keywords (список слов)",
+        "Шаг 3: keywords содержат реальные общие значимые слова из текстов проектов",
+        "Шаг 4: для несхожих проектов score < 0.5, keywords минимальны"
+      ],
+      "dependencies": ["TASK-012"],
+      "status": "pending"
+    },
+    {
+      "id": "TASK-017",
+      "category": "ui",
+      "priority": "critical",
+      "description": "Фронтенд: список проектов с фильтрами, поиском и пагинацией",
+      "acceptance_criteria": [
+        "ProjectsView.vue: таблица с колонками (название, направление, срок, группа-тег, score)",
+        "ProjectFilters.vue: dropdown-фильтры (direction, priority_direction, trl, is_ongoing, has_group, group_source)",
+        "Поисковая строка с debounce 300ms",
+        "Все фильтры сохраняются в Pinia store (projects.ts) и URL query params",
+        "При навигации обратно на вкладку — фильтры восстанавливаются",
+        "Счётчики в шапке: Всего / Новых / Авто-проверенных",
+        "Список загружается ≤2 сек при 1500 проектах (серверная пагинация)"
+      ],
+      "test_steps": [
+        "Шаг 1: открыть /projects — список проектов загружается",
+        "Шаг 2: ввести текст в поиск — список фильтруется через 300ms",
+        "Шаг 3: выбрать фильтр по направлению — список обновляется без reload страницы",
+        "Шаг 4: перейти на /selection и вернуться — фильтры сохранены",
+        "Шаг 5: счётчики в шапке соответствуют данным из /api/stats/counters"
+      ],
+      "dependencies": ["TASK-006", "TASK-008"],
+      "status": "pending"
+    },
+    {
+      "id": "TASK-018",
+      "category": "ui",
+      "priority": "critical",
+      "description": "Фронтенд: боковая панель карточки проекта (slide-in)",
+      "acceptance_criteria": [
+        "При клике на строку таблицы — ProjectDetailPanel.vue открывается справа без перезагрузки",
+        "Панель: все поля проекта, информация о группе (название, тип, score, список других проектов группы)",
+        "Действия в панели: кнопки 'Добавить в группу', 'Убрать из группы', 'Добавить в отбор' / 'Убрать из отбора'",
+        "Slide-in анимация (CSS transition)",
+        "Все текстовые поля показываются полностью (без обрезки)"
+      ],
+      "test_steps": [
+        "Шаг 1: кликнуть на проект в списке — панель появляется справа с анимацией",
+        "Шаг 2: все поля заявки отображаются полностью",
+        "Шаг 3: нажать 'Добавить в отбор' — кнопка меняется на 'Убрать из отбора'",
+        "Шаг 4: закрыть панель кликом на крестик или вне панели"
+      ],
+      "dependencies": ["TASK-017"],
+      "status": "pending"
+    },
+    {
+      "id": "TASK-019",
+      "category": "ui",
+      "priority": "high",
+      "description": "Фронтенд: чекбоксы для массового выделения и создание ручной группы",
+      "acceptance_criteria": [
+        "Колонка с чекбоксами в таблице проектов (выделить один / выделить все на странице)",
+        "При выделении ≥2 проектов появляется плавающая панель действий: 'Создать группу', 'Добавить в отбор'",
+        "Диалог создания группы: поля name (обязательное), description (опциональное)",
+        "При конфликте (проект уже в группе) — предупреждение с именем группы и предложением переместить",
+        "После создания — список обновляется, новая группа видна в тегах проектов"
+      ],
+      "test_steps": [
+        "Шаг 1: выделить 3 проекта чекбоксами — появляется панель действий",
+        "Шаг 2: 'Создать группу' → диалог → заполнить name → подтвердить",
+        "Шаг 3: проекты получают цветной тег группы в таблице",
+        "Шаг 4: попытка добавить проект из другой группы — предупреждение"
+      ],
+      "dependencies": ["TASK-017", "TASK-011"],
+      "status": "pending"
+    },
+    {
+      "id": "TASK-020",
+      "category": "ui",
+      "priority": "high",
+      "description": "Фронтенд: режим 'Группы' (аккордеон) и переключение режимов просмотра",
+      "acceptance_criteria": [
+        "Переключатель режимов: 'Список' | 'Группы' (табы или toggle)",
+        "Режим 'Группы': аккордеон, каждая группа — раскрывающийся блок с заголовком (название, кол-во проектов, avg_score, тип, статус подтверждения)",
+        "Внутри группы — те же проекты что в плоском списке, кликабельные",
+        "Внизу — секция 'Без группы' с незгруппированными проектами",
+        "Цветовая кодировка: каждая группа получает цвет из палитры 8-10 цветов",
+        "Авто-неподтверждённые группы — пунктирная рамка тега; ручные и подтверждённые — сплошная",
+        "Переключение мгновенное (данные уже в store), текущий режим сохраняется в localStorage",
+        "Фильтры и поиск работают в обоих режимах"
+      ],
+      "test_steps": [
+        "Шаг 1: переключить в режим 'Группы' — аккордеон с группами",
+        "Шаг 2: раскрыть группу — проекты внутри, аватар с цветом группы",
+        "Шаг 3: переключить обратно в 'Список' — мгновенно, без запроса к серверу",
+        "Шаг 4: обновить страницу — режим просмотра восстановлен",
+        "Шаг 5: ввести текст в поиск в режиме 'Группы' — фильтрует проекты внутри групп"
+      ],
+      "dependencies": ["TASK-017", "TASK-011"],
+      "status": "pending"
+    },
+    {
+      "id": "TASK-021",
+      "category": "ui",
+      "priority": "high",
+      "description": "Фронтенд: кнопка 'Найти похожие', настройка порога, прогресс-бар группировки",
+      "acceptance_criteria": [
+        "GroupingRunDialog.vue: slider + пресеты (Строгий 0.85 / Средний 0.75 / Мягкий 0.65) + ручной ввод (0.50–0.95)",
+        "Последнее значение порога сохраняется в localStorage",
+        "После POST /api/grouping/run: запускается polling /api/grouping/status/{run_id} каждые 2 сек",
+        "GroupingProgressBar.vue: stage-лейбл + progress bar (current/total)",
+        "После завершения: toast-уведомление 'Группировка завершена: найдено N групп', список обновляется",
+        "При ошибке: toast с текстом ошибки"
+      ],
+      "test_steps": [
+        "Шаг 1: нажать 'Найти похожие' — открывается диалог с slider",
+        "Шаг 2: выбрать пресет 'Строгий' — значение меняется на 0.85",
+        "Шаг 3: нажать 'Запустить' — прогресс-бар появляется в шапке",
+        "Шаг 4: progress-бар обновляется, stage меняется с 'embeddings' на 'done'",
+        "Шаг 5: после завершения список обновляется, счётчики меняются"
+      ],
+      "dependencies": ["TASK-014", "TASK-017"],
+      "status": "pending"
+    },
+    {
+      "id": "TASK-022",
+      "category": "ui",
+      "priority": "high",
+      "description": "Фронтенд: управление группами — редактирование, подтверждение, удаление",
+      "acceptance_criteria": [
+        "В режиме 'Группы': кнопки в заголовке группы (редактировать, подтвердить, удалить)",
+        "Редактирование: inline форма для name и description",
+        "Подтверждение авто-группы: диалог предупреждения ('Необратимо'), после подтверждения — рамка тега меняется на сплошную",
+        "Удаление группы: диалог подтверждения, после удаления — проекты остаются в списке без тега",
+        "Все операции без перезагрузки страницы"
+      ],
+      "test_steps": [
+        "Шаг 1: редактировать название группы — изменения сохраняются и отображаются",
+        "Шаг 2: подтвердить авто-группу — тег меняется с пунктира на сплошной",
+        "Шаг 3: удалить группу — проекты освобождаются, счётчики обновляются",
+        "Шаг 4: повторный запуск авто-группировки — подтверждённая группа не тронута"
+      ],
+      "dependencies": ["TASK-020", "TASK-011"],
+      "status": "pending"
+    },
+    {
+      "id": "TASK-023",
+      "category": "ui",
+      "priority": "medium",
+      "description": "Фронтенд: сравнение двух проектов side-by-side",
+      "acceptance_criteria": [
+        "При выборе ровно 2 проектов (чекбоксы) — появляется кнопка 'Сравнить'",
+        "ComparisonSideBySide.vue: два столбца с полями проектов параллельно",
+        "Score сходства показан вверху между столбцами",
+        "HighlightedText.vue: в полях текста общие ключевые слова подсвечены (желтый фон)",
+        "Открывается в модальном окне или отдельной панели"
+      ],
+      "test_steps": [
+        "Шаг 1: выбрать 2 проекта — кнопка 'Сравнить' активна",
+        "Шаг 2: нажать 'Сравнить' — открывается панель/модалка с двумя столбцами",
+        "Шаг 3: общие ключевые слова подсвечены в обоих столбцах",
+        "Шаг 4: score между проектами отображён числом"
+      ],
+      "dependencies": ["TASK-016", "TASK-019"],
+      "status": "pending"
+    },
+    {
+      "id": "TASK-024",
+      "category": "ui",
+      "priority": "high",
+      "description": "Фронтенд: вкладка 'Отбор на семестр'",
+      "acceptance_criteria": [
+        "SelectionView.vue: список отобранных проектов (те же фильтры и поиск что на /projects)",
+        "Счётчик отобранных проектов",
+        "Кнопка 'Убрать из отбора' у каждого проекта",
+        "Кнопка 'Проверить на схожесть' — запускает авто-группировку с context='selection'",
+        "Результат проверки — группы отображаются в режиме аккордеона на этой же вкладке",
+        "Кнопка 'Экспортировать в Excel' — только отобранные проекты",
+        "Один проект может быть одновременно в основном списке с группой И в отборе"
+      ],
+      "test_steps": [
+        "Шаг 1: добавить 5 проектов в отбор через карточки",
+        "Шаг 2: открыть /selection — все 5 проектов в списке",
+        "Шаг 3: 'Проверить на схожесть' — прогресс и результат в режиме групп",
+        "Шаг 4: проверить в БД — groups с context='selection' не влияют на groups с context='main'",
+        "Шаг 5: экспорт — только отобранные проекты"
+      ],
+      "dependencies": ["TASK-014", "TASK-017"],
+      "status": "pending"
+    },
+    {
+      "id": "TASK-025",
+      "category": "ui",
+      "priority": "high",
+      "description": "Фронтенд: импорт Excel — UI загрузки, превью ошибок, подтверждение",
+      "acceptance_criteria": [
+        "ProjectImportDialog.vue: drag-and-drop или file picker для .xlsx",
+        "После выбора файла — POST /api/projects/import (без confirm=true): показ превью",
+        "Превью: {valid_count} строк готовы к импорту, список ошибок по строкам, список дубликатов (предупреждения)",
+        "Кнопка 'Импортировать' — POST с confirm=true",
+        "Прогресс/спиннер во время загрузки",
+        "После успеха — диалог закрывается, список проектов обновляется"
+      ],
+      "test_steps": [
+        "Шаг 1: нажать 'Импорт' — диалог открывается",
+        "Шаг 2: загрузить файл с 10 строками — превью показывает 10 valid_count",
+        "Шаг 3: загрузить файл с ошибками — список ошибок с номерами строк",
+        "Шаг 4: нажать 'Импортировать' — проекты появляются в списке"
+      ],
+      "dependencies": ["TASK-009", "TASK-017"],
+      "status": "pending"
+    },
+    {
+      "id": "TASK-026",
+      "category": "ui",
+      "priority": "medium",
+      "description": "Фронтенд: вкладка 'История' — лог запусков авто-группировки",
+      "acceptance_criteria": [
+        "GroupingHistoryView.vue: таблица запусков с колонками (дата/время, порог, контекст, обработано проектов, найдено групп, проектов в группах, процент подтверждённых, статус)",
+        "Таблица сортируется по дате (новые сверху)",
+        "Данные из GET /api/grouping/history"
+      ],
+      "test_steps": [
+        "Шаг 1: открыть /history — таблица с историей запусков",
+        "Шаг 2: убедиться что последний запуск группировки отображается в списке",
+        "Шаг 3: поле confirmed_rate показывает процент подтверждённых групп"
+      ],
+      "dependencies": ["TASK-014", "TASK-006"],
+      "status": "pending"
+    },
+    {
+      "id": "TASK-027",
+      "category": "ui",
+      "priority": "medium",
+      "description": "Фронтенд: вкладка 'Справочники' — управление значениями",
+      "acceptance_criteria": [
+        "DictionariesView.vue: три секции (Направления, Приоритетные направления, УГТ)",
+        "DictionaryEditor.vue: таблица с inline-редактированием и кнопками добавить/деактивировать",
+        "Деактивированные значения отображаются серым с иконкой 'неактивно'",
+        "Добавление: inline поле ввода + кнопка сохранить",
+        "Изменения вступают в силу мгновенно (оптимистичные обновления)"
+      ],
+      "test_steps": [
+        "Шаг 1: открыть /dictionaries — 3 секции со справочниками",
+        "Шаг 2: добавить новое направление — появляется в списке",
+        "Шаг 3: деактивировать направление — серое, не видно в фильтрах",
+        "Шаг 4: в фильтрах на /projects — деактивированное направление отсутствует"
+      ],
+      "dependencies": ["TASK-007", "TASK-006"],
+      "status": "pending"
+    },
+    {
+      "id": "TASK-028",
+      "category": "security",
+      "priority": "high",
+      "description": "Rate limiting на API и базовая защита от злоупотреблений",
+      "acceptance_criteria": [
+        "Rate limiting через slowapi или nginx limit_req: /api/grouping/run — не более 1 запуска в 30 секунд",
+        "Общий rate limit: 200 req/min на IP",
+        "При превышении — 429 Too Many Requests с Retry-After заголовком",
+        "Защита от повторного запуска группировки: Redis lock (SETNX) на время выполнения задачи",
+        "Размер файла при импорте: максимум 50 MB"
+      ],
+      "test_steps": [
+        "Шаг 1: отправить POST /api/grouping/run дважды подряд — второй запрос получает 409",
+        "Шаг 2: 201 запрос подряд к любому endpoint — 429 на 201-м",
+        "Шаг 3: попытка загрузить файл >50 MB — 413 Request Entity Too Large"
+      ],
+      "dependencies": ["TASK-014", "TASK-005"],
+      "status": "pending"
+    },
+    {
+      "id": "TASK-029",
+      "category": "infrastructure",
+      "priority": "medium",
+      "description": "Резервное копирование PostgreSQL: ежедневный бэкап в Docker volume",
+      "acceptance_criteria": [
+        "Скрипт backup.sh: pg_dump → сжатый файл с датой в названии",
+        "Хранение: папка /backups с удалением файлов старше 30 дней",
+        "Docker-сервис backup или cron-задача: запуск ежедневно в 3:00",
+        "Документация восстановления: команда pg_restore"
+      ],
+      "test_steps": [
+        "Шаг 1: вручную запустить backup.sh — файл .dump.gz создан",
+        "Шаг 2: восстановить из бэкапа в тестовую БД — данные восстановлены",
+        "Шаг 3: docker compose logs backup — расписание активно"
+      ],
+      "dependencies": ["TASK-003"],
+      "status": "pending"
+    },
+    {
+      "id": "TASK-030",
+      "category": "integration",
+      "priority": "medium",
+      "description": "End-to-end тест: полный рабочий цикл от импорта до экспорта отобранных",
+      "acceptance_criteria": [
+        "Тест-сценарий: импорт 50 проектов из тестового Excel → авто-группировка → ручные корректировки → добавление в отбор → финальная проверка схожести → экспорт",
+        "Производительность: авто-группировка 50 проектов < 30 сек, экспорт < 5 сек",
+        "Данные корректны на каждом этапе (счётчики, группы, отбор)",
+        "Документ scenarios/e2e_scenario.md с шагами воспроизведения"
+      ],
+      "test_steps": [
+        "Шаг 1: загрузить тестовый файл test_projects_50.xlsx",
+        "Шаг 2: запустить авто-группировку, дождаться завершения",
+        "Шаг 3: подтвердить одну авто-группу, создать одну ручную группу",
+        "Шаг 4: добавить 10 проектов в отбор, проверить схожесть среди отобранных",
+        "Шаг 5: экспортировать отобранные — файл содержит 10 строк с полями Группа и Score"
+      ],
+      "dependencies": ["TASK-024", "TASK-025"],
+      "status": "pending"
+    }
+  ]
+}
