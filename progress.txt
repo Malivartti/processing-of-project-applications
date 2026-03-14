@@ -306,6 +306,31 @@
 
 ---
 
+## Итерация 13 — 2026-03-15
+**Фича:** TASK-017 — Фронтенд: список проектов с фильтрами, поиском и пагинацией
+**Статус:** Завершено
+**Что сделано:**
+- frontend/src/api/projects.ts: projectsApi с методами getList (все фильтры + пагинация), getStats, select, deselect; типы ProjectListItem, ProjectListResponse, StatsCounters, ProjectFilters
+- frontend/src/api/dictionaries.ts: dictionariesApi.getAll(type, activeOnly) для загрузки направлений/УГТ в фильтры
+- frontend/src/stores/projects.ts: Pinia store useProjectsStore — state (items, total, loading, stats, filters), actions (fetchProjects, fetchStats, setFilters, setPage, resetFilters)
+- frontend/src/components/ProjectFilters.vue: поисковая строка с debounce 300ms + dropdowns (direction, priority_direction, trl, is_ongoing, has_group, group_source) + кнопка сброса
+- frontend/src/views/ProjectsView.vue: el-table с колонками (название, направление, срок, группа-тег с авто/ручной стилизацией, статус), счётчики в шапке, пагинация, sync фильтров с URL query params
+- ruff OK, pytest 84 passed
+**Следующие шаги:**
+- TASK-018: Боковая панель карточки проекта (depends on TASK-017 — now done, critical)
+- TASK-019: Чекбоксы + создание ручной группы (depends on TASK-017, TASK-011 — both done)
+- TASK-020: Режим 'Группы' — аккордеон (depends on TASK-017, TASK-011 — both done)
+- TASK-021: Кнопка 'Найти похожие' + прогресс-бар (depends on TASK-014, TASK-017 — both done)
+**Заметки для следующей итерации:**
+- ProjectFilters.vue загружает справочники в onMounted через Promise.all; для фильтра group_source: 'auto' и 'manual'
+- URL query params: синхронизируются через router.replace({query}) при изменении фильтров, восстанавливаются в onMounted через syncFiltersFromQuery
+- Группы: auto → пунктирная рамка тега; manual → сплошная рамка; цвет из палитры GROUP_COLORS по hash от group_id
+- ProjectsStore — Pinia singleton, фильтры сохраняются при переходе между вкладками (в т.ч. через URL)
+- Для TASK-018 нужно: добавить @row-click handler в таблицу (уже есть console.log), создать ProjectDetailPanel.vue как slide-in drawer
+- el-statistic из Element Plus — компонент для счётчиков в шапке
+
+---
+
 ## Итерация 0 — Инициализация
 **Фича:** Настройка проекта
 **Статус:** Ожидает начала

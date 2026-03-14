@@ -397,7 +397,7 @@
         "Шаг 5: счётчики в шапке соответствуют данным из /api/stats/counters"
       ],
       "dependencies": ["TASK-006", "TASK-008"],
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": "TASK-018",
