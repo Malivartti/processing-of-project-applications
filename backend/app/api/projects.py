@@ -15,6 +15,7 @@ from app.schemas.project import (
     ProjectUpdate,
     StatsCounters,
 )
+from app.services.excel_export import ExcelExportService, ExportContext
 from app.services.excel_import import ExcelImportService, build_template_xlsx
 from app.services.project import ProjectService
 
@@ -45,6 +46,42 @@ async def list_projects(
     )
     service = ProjectService(db)
     return await service.get_list(filters, limit=limit, offset=offset)
+
+
+@router.get("/api/projects/export")
+async def export_projects(
+    context: ExportContext = Query("all"),
+    direction_id: uuid.UUID | None = Query(None),
+    priority_direction_id: uuid.UUID | None = Query(None),
+    trl_id: uuid.UUID | None = Query(None),
+    is_ongoing: bool | None = Query(None),
+    has_group: bool | None = Query(None),
+    group_source: GroupSource | None = Query(None),
+    search: str | None = Query(None),
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+    service = ExcelExportService(db)
+    filtered_projects = None
+    if context == "filtered":
+        filters = ProjectFilters(
+            direction_id=direction_id,
+            priority_direction_id=priority_direction_id,
+            trl_id=trl_id,
+            is_ongoing=is_ongoing,
+            has_group=has_group,
+            group_source=group_source,
+            search=search,
+        )
+        from app.repositories.project import ProjectRepo
+
+        repo = ProjectRepo(db)
+        filtered_projects, _ = await repo.get_list(filters, limit=10000, offset=0)
+    xlsx_bytes = await service.export(context=context, filtered_projects=filtered_projects)
+    return Response(
+        content=xlsx_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=projects_export.xlsx"},
+    )
 
 
 @router.get("/api/projects/template")

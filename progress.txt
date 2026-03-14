@@ -446,6 +446,30 @@
 
 ---
 
+## Итерация 19 — 2026-03-15
+**Фича:** TASK-010 — Экспорт проектов в Excel (.xlsx) — все варианты фильтрации
+**Статус:** Завершено
+**Что сделано:**
+- backend/app/services/excel_export.py: ExcelExportService с методами export(context, filtered_projects), _build_xlsx, _fetch_all_projects, _fetch_selected_projects, _fetch_grouped_projects, _get_group_avg_scores
+- ExportContext = Literal["all", "filtered", "selected", "grouped"]
+- avg_score per group вычисляется через JOIN similarity_scores + projects (proj_a.group_id = proj_b.group_id)
+- backend/app/api/projects.py: GET /api/projects/export — Content-Disposition attachment; filename=projects_export.xlsx
+- Для context=filtered: применяются те же фильтры что у GET /api/projects (limit=10000)
+- Excel-колонки: Название, Описание проблемы, Цель, Ожидаемый результат, Текущий, Направление, Приоритетное направление, УГТ, В отборе, Источник, Группа, Score
+- tests/test_export.py: 13 тестов — build_xlsx (6 кейсов), export контексты (4), API endpoint (3)
+- ruff OK, pytest 97 passed
+**Следующие шаги:**
+- TASK-025: Импорт Excel UI (depends on TASK-009, TASK-017 — done)
+- TASK-024: Вкладка 'Отбор на семестр' (depends on TASK-014, TASK-017 — done)
+- TASK-015: Отклонение рекомендаций (depends on TASK-014 — done)
+**Заметки для следующей итерации:**
+- ExportContext — Literal type, FastAPI автоматически валидирует через Query
+- avg_score: JOIN SimilarityScore с aliases proj_a/proj_b по group_id; может быть None если пар нет (ручная группа или группировка ещё не запускалась)
+- context=filtered: фильтры те же что у list_projects; filtered_projects=None в service.export() fallback на all
+- Маршрут /api/projects/export зарегистрирован до /{project_id} — избегаем конфликт
+
+---
+
 ## Итерация 0 — Инициализация
 **Фича:** Настройка проекта
 **Статус:** Ожидает начала

@@ -238,7 +238,7 @@
         "Шаг 4: GET /api/projects/export?context=grouped — только проекты в группах, столбцы Группа и Score заполнены"
       ],
       "dependencies": ["TASK-008"],
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": "TASK-011",
