@@ -224,6 +224,42 @@
 
 ---
 
+## Итерация 10 — 2026-03-15
+**Фича:** TASK-013 — Алгоритм авто-группировки: cosine similarity + agglomerative clustering
+**Статус:** Завершено
+**Что сделано:**
+- backend/app/services/clustering.py: ClusteringService с тремя статическими методами:
+  - cosine_similarity_matrix(embeddings) → матрица сходства через sklearn.metrics.pairwise.cosine_similarity
+  - apply_rejected_pairs(matrix, project_ids, rejected_set) → обнуляет сходство для отклонённых пар (deep copy)
+  - cluster(matrix, threshold) → AgglomerativeClustering(metric='precomputed', linkage='average', distance_threshold=1-threshold), возвращает группы (≥2 проектов)
+- run_auto_grouping(session, threshold, context, grouping_run_id=None) — полный пайплайн:
+  - Загружает проекты с эмбеддингами (для selection — только is_selected=True)
+  - Загружает rejected_pairs для этих проектов из БД
+  - Строит матрицу сходства и обнуляет rejected пары
+  - Запускает кластеризацию
+  - Удаляет старые непроверенные авто-группы (source='auto', is_confirmed=False) для данного контекста
+  - Создаёт новые группы Group(source='auto', is_confirmed=False), обновляет project.group_id
+  - Сохраняет SimilarityScore (upsert через pg_insert.on_conflict_do_update)
+  - Выставляет is_auto_checked=True всем обработанным проектам
+- tests/test_clustering.py: 20 тестов — TestCosineSimMatrix (5), TestApplyRejectedPairs (4), TestCluster (7), TestRunAutoGrouping (4)
+- ruff OK, pytest 74 passed
+**Следующие шаги:**
+- TASK-014: Celery-задача авто-группировки с отслеживанием прогресса через Redis
+  - Обернуть run_auto_grouping в @celery.task
+  - Создать GroupingRun перед запуском, обновлять статус
+  - Redis HASH grouping:progress:{run_id} со stage/current/total
+  - API: POST /api/grouping/run, GET /api/grouping/status/{run_id}, GET /api/grouping/history
+  - Redis lock (SETNX) для предотвращения двойного запуска
+**Заметки для следующей итерации:**
+- run_auto_grouping принимает sync Session (psycopg2), не AsyncSession
+- grouping_run_id=None по умолчанию — TASK-014 передаст реальный run.id
+- Для Celery task: использовать _get_sync_session() из embeddings.py (паттерн одинаковый)
+- celery_app.py нужно добавить в include: "app.tasks.clustering"
+- GroupingRun.status: pending → running → completed/failed
+- Redis ключ для прогресса: "grouping:progress:{run_id}" (HASH), TTL = 1 час после завершения
+
+---
+
 ## Итерация 0 — Инициализация
 **Фича:** Настройка проекта
 **Статус:** Ожидает начала
