@@ -37,7 +37,7 @@
         "Шаг 4: curl http://localhost:5173 — фронтенд отдаёт HTML-страницу"
       ],
       "dependencies": [],
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": "TASK-002",

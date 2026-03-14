@@ -16,6 +16,29 @@
 
 ---
 
+## Итерация 1 — 2026-03-14
+**Фича:** TASK-001 — Инициализация структуры монорепозитория и Docker Compose окружения
+**Статус:** Завершено
+**Что сделано:**
+- Создана структура папок: backend/, frontend/, nginx/
+- docker-compose.yml с 6 сервисами: db (pgvector/pg16), redis (7-alpine), backend, celery-worker, frontend, nginx
+- Все сервисы имеют healthcheck и корректные depends_on
+- .env.example со всеми переменными окружения
+- backend/: Dockerfile (uv), pyproject.toml, minimal FastAPI app с /health, Celery placeholder, тест
+- frontend/: Dockerfile, Vite+Vue3+Pinia+Router+ElementPlus, 4 views (Projects/Selection/History/Dictionaries)
+- nginx/nginx.conf: /api/ → backend:8000, / → frontend:5173 с proxy_read_timeout 300s
+- ruff OK, pytest OK (1 passed)
+**Следующие шаги:**
+- TASK-002: FastAPI config, Pydantic Settings, AsyncEngine + asyncpg, GET /health с проверкой DB, CORS
+- TASK-003: SQLAlchemy ORM models, Alembic initial migration с pgvector
+**Заметки для следующей итерации:**
+- uv sync --extra dev нужен для ruff/pytest (dev optional deps)
+- backend работает от python:3.11-slim, uv устанавливается через pip
+- TASK-002 зависит только от TASK-001 (теперь done)
+- Для celery-worker SYNC_DATABASE_URL использует psycopg2 (не asyncpg)
+
+---
+
 ## Итерация 0 — Инициализация
 **Фича:** Настройка проекта
 **Статус:** Ожидает начала
