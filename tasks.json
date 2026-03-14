@@ -168,7 +168,7 @@
         "Шаг 5: проект с деактивированным direction_id — направление всё ещё видно в карточке проекта"
       ],
       "dependencies": ["TASK-003"],
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": "TASK-008",

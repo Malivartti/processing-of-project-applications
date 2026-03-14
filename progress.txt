@@ -107,6 +107,29 @@
 
 ---
 
+## Итерация 5 — 2026-03-15
+**Фича:** TASK-007 — Справочники: API CRUD для directions, priority_directions, trl_levels
+**Статус:** Завершено
+**Что сделано:**
+- backend/app/schemas/dictionary.py: DictionaryItemRead, DictionaryItemCreate, DictionaryItemUpdate (level: int | None для trl_levels)
+- backend/app/repositories/dictionary.py: DictionaryRepo (Generic[T]) с get_all, get_by_id, create, update, deactivate
+- backend/app/services/dictionary.py: DictionaryService — деактивация через is_active=False, не удаление; hasattr check для level при create/update
+- backend/app/api/dictionaries.py: роутер /api/dictionaries/{type} — GET, POST, PATCH/{id}, DELETE/{id} (204)
+- backend/app/main.py: include_router(dictionaries_router)
+- migrations/versions/002_seed_dictionaries.py: 6 directions, 6 priority_directions, 7 trl_levels
+- tests/test_dictionaries.py: 10 тестов (get_all, active_only, trl levels, create, update, delete, 404 cases, unknown type)
+- ruff OK, pytest 15 passed
+**Следующие шаги:**
+- TASK-008: Projects API (depends on TASK-003, TASK-007 — оба done)
+- TASK-005: Nginx конфигурация (depends on TASK-001, TASK-002 — оба done)
+**Заметки для следующей итерации:**
+- DictionaryRepo Generic[T] с TypeVar(T, Direction, PriorityDirection, TRLLevel) — лежит в app/repositories/dictionary.py
+- hasattr(self.model, "level") используется в сервисе, чтобы не передавать level в Direction/PriorityDirection
+- Seed migration ID="002", down_revision="001" — применяется после 001_initial
+- DictionaryItemRead с from_attributes=True: level=None по умолчанию (Direction/PriorityDirection не имеют этого атрибута — AttributeError → default)
+
+---
+
 ## Итерация 0 — Инициализация
 **Фича:** Настройка проекта
 **Статус:** Ожидает начала
