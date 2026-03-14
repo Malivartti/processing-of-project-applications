@@ -245,6 +245,13 @@ class ExcelImportService:
             for row in valid_rows
         ]
         self.session.add_all(projects)
+        await self.session.flush()  # populate project.id before commit
+        project_ids = [str(p.id) for p in projects]
         await self.session.commit()
-        # NOTE: bulk_generate_embeddings Celery task will be triggered in TASK-012
+
+        # Trigger async embedding generation for newly imported projects
+        from app.tasks.embeddings import bulk_generate_embeddings
+
+        bulk_generate_embeddings.delay(project_ids)
+
         return len(projects)

@@ -286,7 +286,7 @@
         "Шаг 4: docker compose stats celery-worker — потребление RAM ≤ 1 GB"
       ],
       "dependencies": ["TASK-004", "TASK-008"],
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": "TASK-013",

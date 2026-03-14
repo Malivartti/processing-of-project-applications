@@ -7,7 +7,7 @@ celery = Celery(
     "ppa",
     broker=settings.REDIS_URL,
     result_backend=settings.REDIS_URL,
-    include=["app.tasks.ping"],
+    include=["app.tasks.ping", "app.tasks.embeddings"],
 )
 
 celery.conf.update(
@@ -29,11 +29,8 @@ def get_embedding_model():
 
 @worker_init.connect
 def load_models(sender, **kwargs):
-    """Load ML models when the Celery worker starts.
-
-    The actual model (rubert-tiny2) will be loaded in TASK-012.
-    This hook is called once per worker process before tasks begin.
-    """
+    """Load rubert-tiny2 at worker startup (once per process)."""
     global _embedding_model
-    # Placeholder: TASK-012 will assign the real SentenceTransformer here
-    _embedding_model = None
+    from app.services.embedding import load_sentence_transformer
+
+    _embedding_model = load_sentence_transformer()

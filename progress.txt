@@ -177,6 +177,30 @@
 
 ---
 
+## Итерация 8 — 2026-03-15
+**Фича:** TASK-012 — ML: интеграция rubert-tiny2 через sentence-transformers в Celery-воркере
+**Статус:** Завершено
+**Что сделано:**
+- Добавлены зависимости: sentence-transformers>=3.0.0, scikit-learn>=1.5.0, pymorphy3>=2.0.0, numpy>=1.26.0 в pyproject.toml
+- backend/app/utils/text.py: TextProcessingUtils.prepare_text() — конкатенация title+problem+goal+expected_result, нижний регистр, удаление пунктуации, схлопывание пробелов
+- backend/app/services/embedding.py: EmbeddingService.encode(texts) → np.ndarray (312-dim, normalize_embeddings=True); load_sentence_transformer() — загрузка cointegrated/rubert-tiny2
+- backend/app/tasks/embeddings.py: Celery-задача bulk_generate_embeddings(project_ids) — берёт sync DB сессию (psycopg2), выбирает проекты без эмбеддингов, кодирует, сохраняет в БД
+- backend/app/tasks/celery_app.py: worker_init теперь реально загружает rubert-tiny2 через load_sentence_transformer(); задача embeddings добавлена в include
+- backend/app/services/excel_import.py: do_import() теперь запускает bulk_generate_embeddings.delay() после commit
+- tests/test_embedding.py: 9 тестов — TextProcessingUtils (5 кейсов), EmbeddingService с mock (3 кейса), регистрация задачи и skipped при отсутствии модели
+- ruff OK, pytest 42 passed
+**Следующие шаги:**
+- TASK-011: Groups API (depends on TASK-008 — done); нужна для TASK-013
+- TASK-010: Экспорт в Excel (depends on TASK-008 — done)
+- TASK-013: Авто-группировка (depends on TASK-011, TASK-012 — оба будут done)
+**Заметки для следующей итерации:**
+- bulk_generate_embeddings использует _get_sync_session() — создаёт новый sync engine на каждый вызов; для TASK-013 можно переиспользовать
+- worker_init загружает модель при старте; в тестах _embedding_model=None (сигнал не срабатывает) — тест проверяет ветку skipped
+- TextProcessingUtils._CLEAN_RE убирает всё кроме \w и \s (unicode-safe)
+- EmbeddingService принимает модель в конструктор — удобно для мокирования в тестах
+
+---
+
 ## Итерация 0 — Инициализация
 **Фича:** Настройка проекта
 **Статус:** Ожидает начала
