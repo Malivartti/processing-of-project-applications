@@ -400,6 +400,29 @@
 
 ---
 
+## Итерация 17 — 2026-03-15
+**Фича:** TASK-021 — Фронтенд: кнопка 'Найти похожие', настройка порога, прогресс-бар группировки
+**Статус:** Завершено
+**Что сделано:**
+- frontend/src/api/grouping.ts: startGrouping(threshold, context), getGroupingStatus(runId), getGroupingHistory(); типы GroupingRunStartResponse, GroupingStatusResponse
+- frontend/src/components/GroupingRunDialog.vue: el-dialog с пресетами (Строгий 0.85/Средний 0.75/Мягкий 0.65), el-slider (0.50–0.95, step=0.01), el-input-number; localStorage-персистентность под ключом 'grouping_threshold'; emit 'start' с threshold
+- frontend/src/components/GroupingProgressBar.vue: polling каждые 2с через setInterval; stage-лейблы на русском; el-progress с процентом current/total; emit 'completed' (с groups_found) при done, 'error' при failed; cleanup в onUnmounted
+- frontend/src/views/ProjectsView.vue: кнопка 'Найти похожие' в toolbar; GroupingRunDialog и GroupingProgressBar подключены; onGroupingStart (вызывает API, сохраняет activeRunId), onGroupingCompleted (toast + refresh), onGroupingError (toast)
+- ruff OK, pytest 84 passed
+**Следующие шаги:**
+- TASK-022: Управление группами — редактирование, подтверждение, удаление (depends on TASK-020 — done)
+- TASK-010: Экспорт в Excel (depends on TASK-008 — done)
+- TASK-015: Отклонение рекомендаций (depends on TASK-014 — done)
+- TASK-025: Импорт Excel UI (depends on TASK-009, TASK-017 — done)
+**Заметки для следующей итерации:**
+- GroupingProgressBar: polling через setInterval(2000), очищается в onUnmounted и при completed/error
+- Контекст 'main' используется для ProjectsView; для SelectionView (TASK-024) будет 'selection'
+- activeRunId в ProjectsView — ref<string|null>; при null кнопка видна, при not-null — прогресс-бар
+- После onGroupingCompleted: fetchProjects() + fetchGroupsMode() (если viewMode === 'groups')
+- TASK-022 теперь разблокирован (TASK-020, TASK-011 — done)
+
+---
+
 ## Итерация 0 — Инициализация
 **Фича:** Настройка проекта
 **Статус:** Ожидает начала

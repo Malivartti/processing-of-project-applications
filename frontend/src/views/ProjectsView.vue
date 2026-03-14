@@ -12,6 +12,11 @@
       @created="onGroupCreated"
     />
 
+    <GroupingRunDialog
+      v-model="showGroupingDialog"
+      @start="onGroupingStart"
+    />
+
     <!-- Stats header -->
     <el-row :gutter="16" class="stats-row">
       <el-col :span="8">
@@ -30,10 +35,27 @@
     <!-- Filters + view mode toggle -->
     <div class="toolbar">
       <ProjectFilters :initial-filters="store.filters" @change="onFiltersChange" @reset="onFiltersReset" />
-      <el-radio-group :model-value="store.viewMode" size="small" class="view-toggle" @change="onViewModeChange">
-        <el-radio-button value="list">Список</el-radio-button>
-        <el-radio-button value="groups">Группы</el-radio-button>
-      </el-radio-group>
+      <div class="toolbar-right">
+        <GroupingProgressBar
+          v-if="activeRunId"
+          :run-id="activeRunId"
+          context="main"
+          @completed="onGroupingCompleted"
+          @error="onGroupingError"
+        />
+        <el-button
+          v-else
+          type="primary"
+          size="small"
+          @click="showGroupingDialog = true"
+        >
+          Найти похожие
+        </el-button>
+        <el-radio-group :model-value="store.viewMode" size="small" class="view-toggle" @change="onViewModeChange">
+          <el-radio-button value="list">Список</el-radio-button>
+          <el-radio-button value="groups">Группы</el-radio-button>
+        </el-radio-group>
+      </div>
     </div>
 
     <!-- List mode: Table -->
@@ -133,10 +155,13 @@ import { ElMessage } from 'element-plus'
 import type { TableInstance } from 'element-plus'
 import { useProjectsStore, type ProjectsFilters, type ViewMode } from '../stores/projects'
 import { projectsApi, type ProjectListItem } from '../api/projects'
+import { groupingApi } from '../api/grouping'
 import ProjectFilters from '../components/ProjectFilters.vue'
 import ProjectDetailPanel from '../components/ProjectDetailPanel.vue'
 import CreateGroupDialog from '../components/CreateGroupDialog.vue'
 import GroupsAccordion from '../components/GroupsAccordion.vue'
+import GroupingRunDialog from '../components/GroupingRunDialog.vue'
+import GroupingProgressBar from '../components/GroupingProgressBar.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -149,6 +174,8 @@ const tableRef = ref<TableInstance>()
 // Checked rows (for mass actions)
 const checkedRows = ref<ProjectListItem[]>([])
 const showCreateGroup = ref(false)
+const showGroupingDialog = ref(false)
+const activeRunId = ref<string | null>(null)
 
 function onSelectionChange(rows: ProjectListItem[]) {
   checkedRows.value = rows
@@ -173,6 +200,30 @@ async function addToSelection() {
   } catch {
     // axios interceptor handles toast
   }
+}
+
+async function onGroupingStart(threshold: number) {
+  try {
+    const res = await groupingApi.startGrouping(threshold, 'main')
+    activeRunId.value = res.run_id
+  } catch {
+    // axios interceptor handles toast
+  }
+}
+
+function onGroupingCompleted(groupsFound: number) {
+  activeRunId.value = null
+  ElMessage.success(`Группировка завершена: найдено ${groupsFound} групп`)
+  store.fetchProjects()
+  store.fetchStats()
+  if (store.viewMode === 'groups') {
+    store.fetchGroupsMode()
+  }
+}
+
+function onGroupingError(message: string) {
+  activeRunId.value = null
+  ElMessage.error(message)
 }
 
 async function onGroupCreated() {
@@ -327,6 +378,13 @@ watch(
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
 }
 
 .view-toggle {
