@@ -1,5 +1,10 @@
 <template>
   <div class="projects-view">
+    <ProjectDetailPanel
+      :project-id="selectedProjectId"
+      @close="selectedProjectId = null"
+      @updated="onPanelUpdated"
+    />
     <!-- Stats header -->
     <el-row :gutter="16" class="stats-row">
       <el-col :span="8">
@@ -88,6 +93,7 @@ import { ref, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useProjectsStore, type ProjectsFilters } from '../stores/projects'
 import ProjectFilters from '../components/ProjectFilters.vue'
+import ProjectDetailPanel from '../components/ProjectDetailPanel.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -183,9 +189,15 @@ function onSizeChange(size: number) {
   store.fetchProjects()
 }
 
+const selectedProjectId = ref<string | null>(null)
+
 function onRowClick(row: { id: string }) {
-  // Reserved for TASK-018 (project detail panel)
-  console.log('Selected project:', row.id)
+  selectedProjectId.value = row.id
+}
+
+function onPanelUpdated() {
+  store.fetchProjects()
+  store.fetchStats()
 }
 
 onMounted(() => {

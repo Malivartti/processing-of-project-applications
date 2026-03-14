@@ -40,6 +40,35 @@ export interface ProjectFilters {
   offset?: number
 }
 
+export interface GroupInfo {
+  id: string
+  name: string
+  source: string
+  context: string
+  is_confirmed: boolean
+}
+
+export interface ProjectRead {
+  id: string
+  title: string
+  problem: string | null
+  goal: string | null
+  expected_result: string | null
+  is_ongoing: boolean
+  is_selected: boolean
+  is_auto_checked: boolean
+  source: string
+  direction_id: string | null
+  direction_name: string | null
+  priority_direction_id: string | null
+  priority_direction_name: string | null
+  trl_id: string | null
+  trl_name: string | null
+  group: GroupInfo | null
+  created_at: string
+  updated_at: string
+}
+
 export const projectsApi = {
   async getList(filters: ProjectFilters = {}): Promise<ProjectListResponse> {
     const params: Record<string, unknown> = {
@@ -69,5 +98,10 @@ export const projectsApi = {
 
   async deselect(id: string): Promise<void> {
     await apiClient.delete(`/projects/${id}/select`)
+  },
+
+  async getById(id: string): Promise<ProjectRead> {
+    const { data } = await apiClient.get<ProjectRead>(`/projects/${id}`)
+    return data
   },
 }

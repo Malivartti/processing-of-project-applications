@@ -418,7 +418,7 @@
         "Шаг 4: закрыть панель кликом на крестик или вне панели"
       ],
       "dependencies": ["TASK-017"],
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": "TASK-019",

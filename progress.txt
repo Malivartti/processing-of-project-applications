@@ -331,6 +331,33 @@
 
 ---
 
+## Итерация 14 — 2026-03-15
+**Фича:** TASK-018 — Фронтенд: боковая панель карточки проекта (slide-in)
+**Статус:** Завершено
+**Что сделано:**
+- frontend/src/api/projects.ts: добавлены интерфейсы GroupInfo и ProjectRead; добавлен метод getById(id)
+- frontend/src/api/groups.ts: создан — интерфейсы GroupProjectItem и GroupRead; методы getById(id) и removeProject(groupId, projectId)
+- frontend/src/components/ProjectDetailPanel.vue: el-drawer (direction="rtl", size="480px") с:
+  - Загрузка проекта через getById + группы через groupsApi.getById (если есть group)
+  - Статус-теги (Срочный/Бессрочный, В отборе/Проверен/Новый)
+  - el-descriptions для словарных полей (Направление, Приор. направление, УГТ)
+  - Полные текстовые поля без обрезки (white-space: pre-wrap)
+  - Секция группы с тегом (пунктирный=авто/сплошной=ручной), тип, статус подтверждения, список других проектов
+  - Footer с кнопками: 'Убрать из группы' (если в группе), 'Добавить в отбор' / 'Убрать из отбора'
+- frontend/src/views/ProjectsView.vue: onRowClick теперь устанавливает selectedProjectId; ProjectDetailPanel подключён с @close и @updated (рефреш списка + стата)
+- ruff OK, pytest 84 passed
+**Следующие шаги:**
+- TASK-019: Чекбоксы + создание ручной группы (depends on TASK-017, TASK-011 — both done)
+- TASK-020: Режим 'Группы' — аккордеон (depends on TASK-017, TASK-011 — both done)
+- TASK-021: Кнопка 'Найти похожие' + прогресс-бар (depends on TASK-014, TASK-017 — both done)
+**Заметки для следующей итерации:**
+- ProjectDetailPanel: props.projectId watch → открыть drawer + loadProject; emit('close') при закрытии → parent сбрасывает selectedProjectId = null
+- groupsApi.removeProject возвращает GroupRead (backend так настроен), но мы не используем ответ
+- Кнопка 'Добавить в группу' не реализована (требует выбора существующей группы — зависит от TASK-019/020)
+- el-drawer из Element Plus обеспечивает встроенную CSS slide-in анимацию
+
+---
+
 ## Итерация 0 — Инициализация
 **Фича:** Настройка проекта
 **Статус:** Ожидает начала
