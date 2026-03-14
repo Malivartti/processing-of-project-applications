@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from collections import defaultdict
+from collections.abc import Callable
 
 import numpy as np
 from sklearn.cluster import AgglomerativeClustering
@@ -73,6 +74,7 @@ def run_auto_grouping(
     threshold: float,
     context: str,
     grouping_run_id: uuid.UUID | None = None,
+    progress_callback: Callable[[str, int, int], None] | None = None,
 ) -> dict:
     """Full auto-grouping pipeline. Saves results to DB.
 
@@ -108,6 +110,9 @@ def run_auto_grouping(
     if ctx == GroupContext.selection:
         query = query.where(Project.is_selected.is_(True))
     projects: list[Project] = list(session.execute(query).scalars().all())
+
+    if progress_callback is not None:
+        progress_callback("embeddings", len(projects), len(projects))
 
     if len(projects) < 2:
         if projects:
@@ -148,8 +153,14 @@ def run_auto_grouping(
     sim_matrix = ClusteringService.cosine_similarity_matrix(embeddings)
     sim_matrix = ClusteringService.apply_rejected_pairs(sim_matrix, project_ids, rejected_set)
 
+    if progress_callback is not None:
+        progress_callback("similarity", 1, 1)
+
     # 5. Cluster
     groups_indices = ClusteringService.cluster(sim_matrix, threshold)
+
+    if progress_callback is not None:
+        progress_callback("clustering", 1, 1)
 
     # 6. Delete old unconfirmed auto-groups for this context
     old_groups: list[Group] = list(
@@ -169,8 +180,11 @@ def run_auto_grouping(
     session.flush()
 
     # 7. Create new groups, save similarity scores, update project group_ids
+    total_groups = len(groups_indices)
     projects_in_groups = 0
     for i, group_indices in enumerate(groups_indices):
+        if progress_callback is not None:
+            progress_callback("saving", i, total_groups)
         group_projects = [projects[idx] for idx in group_indices]
         group = Group(
             name=f"Авто-группа {i + 1}",

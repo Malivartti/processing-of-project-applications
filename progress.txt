@@ -260,6 +260,32 @@
 
 ---
 
+## Итерация 11 — 2026-03-15
+**Фича:** TASK-014 — Celery-задача авто-группировки с отслеживанием прогресса через Redis
+**Статус:** Завершено
+**Что сделано:**
+- backend/app/schemas/grouping.py: GroupingRunCreate, GroupingRunRead, GroupingStatusResponse, GroupingRunStartRequest (threshold 0.5–0.95), GroupingRunStartResponse, GroupingHistoryResponse
+- backend/app/tasks/grouping.py: Celery task run_grouping_task(run_id, threshold, context) — обновляет GroupingRun.status (pending→running→completed/failed), пишет прогресс в Redis HASH grouping:progress:{run_id} (stage/current/total/status), устанавливает TTL=3600 после завершения, освобождает lock в finally
+- backend/app/services/clustering.py: добавлен параметр progress_callback — вызывается на этапах embeddings, similarity, clustering, saving
+- backend/app/api/grouping.py: POST /api/grouping/run (Redis lock grouping:lock:{context}, 409 если уже запущено), GET /api/grouping/status/{run_id}, GET /api/grouping/history
+- celery_app.py: добавлен "app.tasks.grouping" в include
+- main.py: зарегистрирован grouping router
+- tests/test_grouping.py: 10 тестов (run OK, run 409 duplicate, status, history, validation)
+- ruff OK, pytest 84 passed
+**Следующие шаги:**
+- TASK-015: Отклонение рекомендаций (rejected_pairs) — depends on TASK-014 (now done)
+- TASK-005: Nginx конфигурация (depends on TASK-001, TASK-002 — done)
+- TASK-006: Vue frontend (depends on TASK-001 — done)
+- TASK-010: Экспорт в Excel (depends on TASK-008 — done)
+**Заметки для следующей итерации:**
+- Redis lock key: "grouping:lock:{context}" (SETNX, TTL=300 на lock, освобождается в finally)
+- Progress HASH key: "grouping:progress:{run_id}" (TTL=3600 после done/failed)
+- run_grouping_task использует _get_sync_session() из embeddings.py (psycopg2)
+- async Redis для API endpoint через redis.asyncio.from_url(settings.REDIS_URL)
+- GroupingRun.started_at устанавливается при переходе в running, completed_at — при завершении
+
+---
+
 ## Итерация 0 — Инициализация
 **Фича:** Настройка проекта
 **Статус:** Ожидает начала

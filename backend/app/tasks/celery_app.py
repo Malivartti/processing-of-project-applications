@@ -7,7 +7,7 @@ celery = Celery(
     "ppa",
     broker=settings.REDIS_URL,
     result_backend=settings.REDIS_URL,
-    include=["app.tasks.ping", "app.tasks.embeddings"],
+    include=["app.tasks.ping", "app.tasks.embeddings", "app.tasks.grouping"],
 )
 
 celery.conf.update(
