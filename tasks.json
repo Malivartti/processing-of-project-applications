@@ -193,7 +193,7 @@
         "Шаг 6: GET /api/stats/counters — корректные счётчики"
       ],
       "dependencies": ["TASK-003", "TASK-007"],
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": "TASK-009",

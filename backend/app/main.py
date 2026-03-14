@@ -4,11 +4,13 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dictionaries import router as dictionaries_router
+from app.api.projects import router as projects_router
 from app.config import settings
 from app.database import get_db
 
 app = FastAPI(title="PPA API", version="0.1.0")
 app.include_router(dictionaries_router)
+app.include_router(projects_router)
 
 app.add_middleware(
     CORSMiddleware,

@@ -130,6 +130,30 @@
 
 ---
 
+## Итерация 6 — 2026-03-15
+**Фича:** TASK-008 — Projects API: CRUD-эндпоинты и репозиторий
+**Статус:** Завершено
+**Что сделано:**
+- backend/app/schemas/project.py: ProjectListItem, ProjectRead, ProjectCreate, ProjectUpdate, ProjectListResponse, StatsCounters, GroupInfo
+- backend/app/repositories/project.py: ProjectRepo с get_list (фильтры + пагинация), get_by_id, create, update, delete, set_selected, count_stats; ProjectFilters dataclass
+- backend/app/services/project.py: ProjectService — маппинг ORM→схемы, NotFoundError при отсутствии
+- backend/app/api/projects.py: GET /api/projects (limit/offset/фильтры/поиск), GET /api/projects/{id}, POST /api/projects, PATCH /api/projects/{id}, DELETE /api/projects/{id}, POST /api/projects/{id}/select, DELETE /api/projects/{id}/select, GET /api/stats/counters
+- Полнотекстовый поиск через plainto_tsquery('russian', :search) с bindparams
+- app/main.py: include_router(projects_router)
+- tests/test_projects.py: 11 тестов — список, фильтры, поиск, get, not_found, create, select/deselect, delete, stats, group_info
+- ruff OK, pytest 26 passed
+**Следующие шаги:**
+- TASK-009: Импорт проектов из Excel (depends on TASK-008, now done)
+- TASK-011: Groups API (depends on TASK-008, now done)
+- TASK-005: Nginx конфигурация (depends on TASK-001, TASK-002, both done)
+**Заметки для следующей итерации:**
+- ProjectRepo._apply_filters: group_source использует JOIN с Group, has_group — просто WHERE
+- Фильтр group_source и has_group взаимоисключающие (group_source имеет приоритет)
+- selectinload используется для всех FK-отношений Project (direction, priority_direction, trl_level, group)
+- count_stats возвращает total/new(is_auto_checked=False)/auto_checked(is_auto_checked=True)
+
+---
+
 ## Итерация 0 — Инициализация
 **Фича:** Настройка проекта
 **Статус:** Ожидает начала
