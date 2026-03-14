@@ -39,6 +39,27 @@
 
 ---
 
+## Итерация 2 — 2026-03-15
+**Фича:** TASK-002 — Настройка FastAPI-приложения: конфиг, БД, базовые зависимости, health-endpoint
+**Статус:** Завершено
+**Что сделано:**
+- backend/app/config.py: Pydantic Settings (DATABASE_URL, SYNC_DATABASE_URL, REDIS_URL, SECRET_KEY, ALLOWED_ORIGINS)
+- Авто-вывод sync_database_url из asyncpg URL (замена +asyncpg → +psycopg2)
+- backend/app/database.py: AsyncEngine (create_async_engine) + async_sessionmaker + Base (DeclarativeBase) + get_db dependency
+- backend/app/exceptions.py: NotFoundError (404), ConflictError (409), ValidationError (422)
+- backend/app/main.py: /health проверяет подключение к PostgreSQL (SELECT 1), CORS с allowed_origins из settings
+- tests/test_health.py: обновлён — мокает get_db через dependency_overrides, проверяет {status: ok, db: ok}
+- ruff OK, pytest OK (1 passed)
+**Следующие шаги:**
+- TASK-003: SQLAlchemy ORM-модели + первая Alembic-миграция (все таблицы, pgvector)
+- TASK-004: Celery + Redis (зависит от TASK-002, теперь done)
+**Заметки для следующей итерации:**
+- TASK-003 и TASK-004 оба зависят только от TASK-002 (теперь done) → можно брать любой из них
+- Base (DeclarativeBase) находится в database.py — модели должны импортировать его оттуда
+- Для Alembic env.py нужен sync engine (psycopg2), не asyncpg
+
+---
+
 ## Итерация 0 — Инициализация
 **Фича:** Настройка проекта
 **Статус:** Ожидает начала
