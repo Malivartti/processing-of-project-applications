@@ -134,6 +134,7 @@
       :groups="store.groups"
       :loading="store.groupModeLoading"
       @project-click="onProjectClick"
+      @refresh="onGroupsRefresh"
     />
 
     <!-- Floating action panel (list mode only) -->
@@ -337,6 +338,12 @@ function onPanelUpdated() {
   if (store.viewMode === 'groups') {
     store.fetchGroupsMode()
   }
+}
+
+function onGroupsRefresh() {
+  store.fetchGroupsMode()
+  store.fetchProjects()
+  store.fetchStats()
 }
 
 function onViewModeChange(mode: ViewMode) {

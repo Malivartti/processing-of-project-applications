@@ -423,6 +423,29 @@
 
 ---
 
+## Итерация 18 — 2026-03-15
+**Фича:** TASK-022 — Фронтенд: управление группами — редактирование, подтверждение, удаление
+**Статус:** Завершено
+**Что сделано:**
+- GroupsAccordion.vue: добавлены иконки-кнопки (Edit/Check/Delete из @element-plus/icons-vue) в заголовок каждой группы; кнопки видны при наведении (opacity: 0 → 1 через CSS transition)
+- Редактирование: inline форма (два el-input — name и description) с состоянием editingGroupId; кнопки "Сохранить" (с loading) и "Отмена"; валидация непустого name
+- Подтверждение: ElMessageBox.confirm с предупреждением о необратимости → groupsApi.confirm(id) → emit 'refresh'
+- Удаление: ElMessageBox.confirm с именем группы → groupsApi.delete(id) → emit 'refresh'
+- groupedData теперь включает description из GroupListItem meta
+- ProjectsView.vue: handler onGroupsRefresh() → fetchGroupsMode() + fetchProjects() + fetchStats(); передан @refresh="onGroupsRefresh" в GroupsAccordion
+- ruff OK, pytest 84 passed
+**Следующие шаги:**
+- TASK-025: Импорт Excel UI (depends on TASK-009, TASK-017 — both done, high priority)
+- TASK-024: Вкладка 'Отбор на семестр' (depends on TASK-014, TASK-017 — both done, high priority)
+- TASK-010: Экспорт в Excel (depends on TASK-008 — done, high priority)
+**Заметки для следующей итерации:**
+- GroupsAccordion теперь импортирует groupsApi напрямую (не через props/emits для API-вызовов)
+- Кнопки действий используют markRaw() для иконок (обязательно для Vue 3 reactive system)
+- После refresh: fetchGroupsMode() обновляет как groups (meta), так и groupModeItems
+- TASK-023 (сравнение side-by-side) заблокирован TASK-016 (compare API) — нужно сделать TASK-016 сначала
+
+---
+
 ## Итерация 0 — Инициализация
 **Фича:** Настройка проекта
 **Статус:** Ожидает начала
