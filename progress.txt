@@ -86,6 +86,27 @@
 
 ---
 
+## Итерация 4 — 2026-03-15
+**Фича:** TASK-004 — Настройка Celery + Redis: celery_app, конфигурация, тестовая задача
+**Статус:** Завершено
+**Что сделано:**
+- celery_app.py: переключён с os.getenv на settings.REDIS_URL (консистентность с конфигом)
+- Добавлен worker_init сигнал (load_models) — заготовка для загрузки ML-модели в TASK-012
+- Глобальная переменная _embedding_model + get_embedding_model() для доступа к модели из задач
+- docker-compose.yml: добавлен сервис flower (порт 5555, profile=monitoring — запускается только при --profile monitoring)
+- tests/test_celery.py: 4 теста — ping возвращает 'pong', задача зарегистрирована, embedding model = None, broker/backend = redis
+- ruff OK, pytest 5 passed (4 celery + 1 health)
+**Следующие шаги:**
+- TASK-007: Справочники API (depends on TASK-003, now done)
+- TASK-005: Nginx конфигурация (depends on TASK-001, TASK-002, both done)
+**Заметки для следующей итерации:**
+- worker_init сигнал: `from celery.signals import worker_init` + `@worker_init.connect`
+- _embedding_model — глобальная переменная в celery_app.py, TASK-012 должен её заполнить через load_models
+- Flower запускается с профилем: `docker compose --profile monitoring up -d flower`
+- celery-worker healthcheck отсутствует (service_started в зависимостях flower), это нормально
+
+---
+
 ## Итерация 0 — Инициализация
 **Фича:** Настройка проекта
 **Статус:** Ожидает начала
