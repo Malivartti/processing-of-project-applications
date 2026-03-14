@@ -17,6 +17,11 @@
       @start="onGroupingStart"
     />
 
+    <ProjectImportDialog
+      v-model="showImportDialog"
+      @imported="onImported"
+    />
+
     <!-- Stats header -->
     <el-row :gutter="16" class="stats-row">
       <el-col :span="8">
@@ -43,14 +48,16 @@
           @completed="onGroupingCompleted"
           @error="onGroupingError"
         />
-        <el-button
-          v-else
-          type="primary"
-          size="small"
-          @click="showGroupingDialog = true"
-        >
-          Найти похожие
-        </el-button>
+        <template v-else>
+          <el-button size="small" @click="showImportDialog = true">Импорт</el-button>
+          <el-button
+            type="primary"
+            size="small"
+            @click="showGroupingDialog = true"
+          >
+            Найти похожие
+          </el-button>
+        </template>
         <el-radio-group :model-value="store.viewMode" size="small" class="view-toggle" @change="onViewModeChange">
           <el-radio-button value="list">Список</el-radio-button>
           <el-radio-button value="groups">Группы</el-radio-button>
@@ -163,6 +170,7 @@ import CreateGroupDialog from '../components/CreateGroupDialog.vue'
 import GroupsAccordion from '../components/GroupsAccordion.vue'
 import GroupingRunDialog from '../components/GroupingRunDialog.vue'
 import GroupingProgressBar from '../components/GroupingProgressBar.vue'
+import ProjectImportDialog from '../components/ProjectImportDialog.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -176,6 +184,7 @@ const tableRef = ref<TableInstance>()
 const checkedRows = ref<ProjectListItem[]>([])
 const showCreateGroup = ref(false)
 const showGroupingDialog = ref(false)
+const showImportDialog = ref(false)
 const activeRunId = ref<string | null>(null)
 
 function onSelectionChange(rows: ProjectListItem[]) {
@@ -225,6 +234,11 @@ function onGroupingCompleted(groupsFound: number) {
 function onGroupingError(message: string) {
   activeRunId.value = null
   ElMessage.error(message)
+}
+
+function onImported() {
+  store.fetchProjects()
+  store.fetchStats()
 }
 
 async function onGroupCreated() {

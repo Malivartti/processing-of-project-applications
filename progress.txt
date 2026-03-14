@@ -470,6 +470,34 @@
 
 ---
 
+## Итерация 20 — 2026-03-15
+**Фича:** TASK-025 — Фронтенд: импорт Excel — UI загрузки, превью ошибок, подтверждение
+**Статус:** Завершено
+**Что сделано:**
+- frontend/src/api/import.ts: importApi с методами preview(file), confirm(file), downloadTemplate(); типы ImportRowError, ImportPreviewResponse
+- frontend/src/components/ProjectImportDialog.vue: двухшаговый диалог (el-dialog):
+  - Шаг 1: el-upload с drag-and-drop, accept=.xlsx, кнопка "Скачать шаблон"
+  - Кнопка "Проверить" → POST /api/projects/import (без confirm) → показывает превью
+  - Шаг 2: el-alert с valid_count, предупреждение о дубликатах, таблица ошибок по строкам
+  - Кнопка "Импортировать N проектов" → POST /api/projects/import?confirm=true
+  - После успеха: диалог закрывается, emit 'imported', список обновляется
+  - Кнопка "← Выбрать другой файл" для сброса; onClosed() сбрасывает состояние
+- frontend/src/views/ProjectsView.vue: кнопка "Импорт" в toolbar (рядом с "Найти похожие"); ProjectImportDialog подключён; onImported() → fetchProjects() + fetchStats()
+- ruff OK, pytest 97 passed
+**Следующие шаги:**
+- TASK-024: Вкладка 'Отбор на семестр' (depends on TASK-014, TASK-017 — done, high priority)
+- TASK-015: Отклонение рекомендаций (depends on TASK-014 — done)
+- TASK-016: Сравнение проектов side-by-side (depends on TASK-012 — done)
+- TASK-026: История группировки UI (depends on TASK-014, TASK-006 — done)
+- TASK-027: Справочники UI (depends on TASK-007, TASK-006 — done)
+**Заметки для следующей итерации:**
+- importApi.downloadTemplate() использует window.open с baseURL из apiClient — работает без дополнительной авторизации
+- Двухшаговый процесс: selectedFile сохраняется между шагами для confirm запроса
+- preview.duplicates — предупреждения, не блокировки; дубликаты всё равно импортируются
+- Кнопка "Импортировать" отключена если valid_count === 0
+
+---
+
 ## Итерация 0 — Инициализация
 **Фича:** Настройка проекта
 **Статус:** Ожидает начала
