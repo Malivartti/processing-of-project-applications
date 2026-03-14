@@ -378,6 +378,28 @@
 
 ---
 
+## Итерация 16 — 2026-03-15
+**Фича:** TASK-020 — Фронтенд: режим 'Группы' (аккордеон) и переключение режимов просмотра
+**Статус:** Завершено
+**Что сделано:**
+- frontend/src/api/groups.ts: добавлены GroupListItem, GroupListResponse интерфейсы; groupsApi.getAll(params), update(id, body), delete(id), confirm(id) методы
+- frontend/src/stores/projects.ts: добавлен ViewMode тип, viewMode (localStorage), groupModeItems, groupModeLoading, groups refs; setViewMode(), fetchGroupsMode() actions
+- fetchGroupsMode() загружает одновременно все проекты (limit=1000) и список групп через Promise.all
+- frontend/src/components/GroupsAccordion.vue: el-collapse аккордеон с группами; заголовок группы (цветной тег + кол-во проектов + тип авто/ручная + статус подтверждения); пунктирная рамка для авто-непотверждённых, сплошная для остальных; секция 'Без группы' внизу; клик по проекту → emit 'project-click'
+- frontend/src/views/ProjectsView.vue: toolbar с ProjectFilters + el-radio-group переключатель (Список/Группы); в режиме 'Группы' — GroupsAccordion вместо таблицы; onViewModeChange(), onProjectClick(); фильтры обновляют оба режима; плавающая панель только в режиме 'Список'
+- ruff OK, pytest 84 passed
+**Следующие шаги:**
+- TASK-022: Управление группами (depends on TASK-020 — now done)
+- TASK-021: Кнопка 'Найти похожие' + прогресс-бар
+- TASK-010: Экспорт в Excel
+**Заметки для следующей итерации:**
+- GroupsAccordion: groupedData строится из store.groupModeItems (группируются по group_id); groupMetaById — Map<string, GroupListItem> для получения is_confirmed
+- viewMode хранится в localStorage под ключом 'projects_view_mode'; восстанавливается при старте
+- При переключении в режим 'Группы' и при изменении фильтров вызывается fetchGroupsMode()
+- TASK-022 теперь разблокирован (TASK-020 done)
+
+---
+
 ## Итерация 0 — Инициализация
 **Фича:** Настройка проекта
 **Статус:** Ожидает начала

@@ -27,79 +27,96 @@
 
     <el-divider />
 
-    <!-- Filters -->
-    <ProjectFilters :initial-filters="store.filters" @change="onFiltersChange" @reset="onFiltersReset" />
-
-    <!-- Table -->
-    <el-table
-      ref="tableRef"
-      v-loading="store.loading"
-      :data="store.items"
-      style="width: 100%; margin-top: 12px"
-      stripe
-      highlight-current-row
-      @row-click="onRowClick"
-      @selection-change="onSelectionChange"
-    >
-      <el-table-column type="selection" width="48" @click.stop />
-
-      <el-table-column prop="title" label="Название" min-width="280" show-overflow-tooltip />
-
-      <el-table-column label="Направление" width="200" show-overflow-tooltip>
-        <template #default="{ row }">
-          <span>{{ row.direction_name || '—' }}</span>
-        </template>
-      </el-table-column>
-
-      <el-table-column label="Срок" width="110" align="center">
-        <template #default="{ row }">
-          <el-tag :type="row.is_ongoing ? 'info' : 'success'" size="small">
-            {{ row.is_ongoing ? 'Бессрочный' : 'Срочный' }}
-          </el-tag>
-        </template>
-      </el-table-column>
-
-      <el-table-column label="Группа" width="180">
-        <template #default="{ row }">
-          <el-tag
-            v-if="row.group_name"
-            :color="getGroupColor(row.group_id)"
-            :style="groupTagStyle(row)"
-            size="small"
-            effect="plain"
-          >
-            {{ row.group_name }}
-          </el-tag>
-          <span v-else>—</span>
-        </template>
-      </el-table-column>
-
-      <el-table-column label="Статус" width="120" align="center">
-        <template #default="{ row }">
-          <el-tag v-if="row.is_selected" type="warning" size="small">В отборе</el-tag>
-          <el-tag v-else-if="row.is_auto_checked" type="success" size="small">Проверен</el-tag>
-          <el-tag v-else type="info" size="small">Новый</el-tag>
-        </template>
-      </el-table-column>
-    </el-table>
-
-    <!-- Pagination -->
-    <div class="pagination-wrapper">
-      <el-pagination
-        v-model:current-page="currentPage"
-        v-model:page-size="pageSize"
-        :total="store.total"
-        :page-sizes="[25, 50, 100]"
-        layout="total, sizes, prev, pager, next"
-        background
-        @current-change="onPageChange"
-        @size-change="onSizeChange"
-      />
+    <!-- Filters + view mode toggle -->
+    <div class="toolbar">
+      <ProjectFilters :initial-filters="store.filters" @change="onFiltersChange" @reset="onFiltersReset" />
+      <el-radio-group :model-value="store.viewMode" size="small" class="view-toggle" @change="onViewModeChange">
+        <el-radio-button value="list">Список</el-radio-button>
+        <el-radio-button value="groups">Группы</el-radio-button>
+      </el-radio-group>
     </div>
 
-    <!-- Floating action panel -->
+    <!-- List mode: Table -->
+    <template v-if="store.viewMode === 'list'">
+      <el-table
+        ref="tableRef"
+        v-loading="store.loading"
+        :data="store.items"
+        style="width: 100%; margin-top: 12px"
+        stripe
+        highlight-current-row
+        @row-click="onRowClick"
+        @selection-change="onSelectionChange"
+      >
+        <el-table-column type="selection" width="48" @click.stop />
+
+        <el-table-column prop="title" label="Название" min-width="280" show-overflow-tooltip />
+
+        <el-table-column label="Направление" width="200" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span>{{ row.direction_name || '—' }}</span>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="Срок" width="110" align="center">
+          <template #default="{ row }">
+            <el-tag :type="row.is_ongoing ? 'info' : 'success'" size="small">
+              {{ row.is_ongoing ? 'Бессрочный' : 'Срочный' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="Группа" width="180">
+          <template #default="{ row }">
+            <el-tag
+              v-if="row.group_name"
+              :color="getGroupColor(row.group_id)"
+              :style="groupTagStyle(row)"
+              size="small"
+              effect="plain"
+            >
+              {{ row.group_name }}
+            </el-tag>
+            <span v-else>—</span>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="Статус" width="120" align="center">
+          <template #default="{ row }">
+            <el-tag v-if="row.is_selected" type="warning" size="small">В отборе</el-tag>
+            <el-tag v-else-if="row.is_auto_checked" type="success" size="small">Проверен</el-tag>
+            <el-tag v-else type="info" size="small">Новый</el-tag>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <!-- Pagination -->
+      <div class="pagination-wrapper">
+        <el-pagination
+          v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
+          :total="store.total"
+          :page-sizes="[25, 50, 100]"
+          layout="total, sizes, prev, pager, next"
+          background
+          @current-change="onPageChange"
+          @size-change="onSizeChange"
+        />
+      </div>
+    </template>
+
+    <!-- Groups mode: Accordion -->
+    <GroupsAccordion
+      v-else
+      :items="store.groupModeItems"
+      :groups="store.groups"
+      :loading="store.groupModeLoading"
+      @project-click="onProjectClick"
+    />
+
+    <!-- Floating action panel (list mode only) -->
     <transition name="float-panel">
-      <div v-if="checkedRows.length >= 2" class="float-actions">
+      <div v-if="store.viewMode === 'list' && checkedRows.length >= 2" class="float-actions">
         <span class="float-label">Выбрано: {{ checkedRows.length }}</span>
         <el-button type="primary" size="small" @click="openCreateGroup">Создать группу</el-button>
         <el-button size="small" @click="addToSelection">Добавить в отбор</el-button>
@@ -114,11 +131,12 @@ import { ref, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import type { TableInstance } from 'element-plus'
-import { useProjectsStore, type ProjectsFilters } from '../stores/projects'
+import { useProjectsStore, type ProjectsFilters, type ViewMode } from '../stores/projects'
 import { projectsApi, type ProjectListItem } from '../api/projects'
 import ProjectFilters from '../components/ProjectFilters.vue'
 import ProjectDetailPanel from '../components/ProjectDetailPanel.vue'
 import CreateGroupDialog from '../components/CreateGroupDialog.vue'
+import GroupsAccordion from '../components/GroupsAccordion.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -227,6 +245,7 @@ function onFiltersChange(newFilters: Partial<ProjectsFilters>) {
   currentPage.value = 1
   syncQueryFromFilters()
   store.fetchProjects()
+  if (store.viewMode === 'groups') store.fetchGroupsMode()
 }
 
 function onFiltersReset() {
@@ -235,6 +254,7 @@ function onFiltersReset() {
   pageSize.value = 50
   router.replace({ query: {} })
   store.fetchProjects()
+  if (store.viewMode === 'groups') store.fetchGroupsMode()
 }
 
 function onPageChange(page: number) {
@@ -256,14 +276,31 @@ function onRowClick(row: { id: string }) {
   selectedProjectId.value = row.id
 }
 
+function onProjectClick(id: string) {
+  selectedProjectId.value = id
+}
+
 function onPanelUpdated() {
   store.fetchProjects()
   store.fetchStats()
+  if (store.viewMode === 'groups') {
+    store.fetchGroupsMode()
+  }
+}
+
+function onViewModeChange(mode: ViewMode) {
+  store.setViewMode(mode)
+  if (mode === 'groups') {
+    store.fetchGroupsMode()
+  }
 }
 
 onMounted(() => {
   syncFiltersFromQuery()
   Promise.all([store.fetchProjects(), store.fetchStats()])
+  if (store.viewMode === 'groups') {
+    store.fetchGroupsMode()
+  }
 })
 
 watch(
@@ -283,6 +320,18 @@ watch(
 
 .stats-row {
   margin-bottom: 8px;
+}
+
+.toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.view-toggle {
+  flex-shrink: 0;
+  margin-top: 2px;
 }
 
 .pagination-wrapper {
