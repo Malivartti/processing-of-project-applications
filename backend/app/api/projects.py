@@ -1,11 +1,13 @@
 import uuid
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, File, Query, UploadFile
+from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models import GroupSource
 from app.repositories.project import ProjectFilters
+from app.schemas.excel_import import ImportPreviewResponse
 from app.schemas.project import (
     ProjectCreate,
     ProjectListResponse,
@@ -13,6 +15,7 @@ from app.schemas.project import (
     ProjectUpdate,
     StatsCounters,
 )
+from app.services.excel_import import ExcelImportService, build_template_xlsx
 from app.services.project import ProjectService
 
 router = APIRouter(tags=["projects"])
@@ -42,6 +45,36 @@ async def list_projects(
     )
     service = ProjectService(db)
     return await service.get_list(filters, limit=limit, offset=offset)
+
+
+@router.get("/api/projects/template")
+async def download_template() -> Response:
+    xlsx_bytes = build_template_xlsx()
+    return Response(
+        content=xlsx_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=projects_template.xlsx"},
+    )
+
+
+@router.post("/api/projects/import", response_model=ImportPreviewResponse)
+async def import_projects(
+    file: UploadFile = File(...),
+    confirm: bool = Query(False),
+    db: AsyncSession = Depends(get_db),
+) -> ImportPreviewResponse:
+    file_bytes = await file.read()
+    service = ExcelImportService(db)
+    valid_rows, preview = await service.parse_and_validate(file_bytes)
+    if confirm:
+        imported = await service.do_import(valid_rows)
+        return ImportPreviewResponse(
+            valid_count=imported,
+            error_count=preview.error_count,
+            errors=preview.errors,
+            duplicates=preview.duplicates,
+        )
+    return preview
 
 
 @router.get("/api/projects/{project_id}", response_model=ProjectRead)

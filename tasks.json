@@ -217,7 +217,7 @@
         "Шаг 5: GET /api/projects — count соответствует количеству импортированных"
       ],
       "dependencies": ["TASK-008"],
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": "TASK-010",

@@ -154,6 +154,29 @@
 
 ---
 
+## Итерация 7 — 2026-03-15
+**Фича:** TASK-009 — Импорт проектов из Excel (.xlsx) с валидацией
+**Статус:** Завершено
+**Что сделано:**
+- backend/app/schemas/excel_import.py: ImportRowError, ImportPreviewResponse
+- backend/app/services/excel_import.py: ExcelImportService — parse_and_validate (openpyxl), do_import (session.add_all); build_template_xlsx()
+- Валидация: обязательное поле title, lookup справочников (directions, priority_directions, trl_levels) по имени (case-insensitive), дубликаты в батче и в БД — warnings, не ошибки
+- backend/app/api/projects.py: GET /api/projects/template (xlsx download), POST /api/projects/import (preview + confirm=true)
+- Маршруты зарегистрированы ДО /{project_id} (избегаем конфликт с UUID path param)
+- tests/test_import.py: 6 тестов (template, preview valid, preview errors, confirm, duplicate warning, empty confirm)
+- ruff OK, pytest 32 passed
+**Следующие шаги:**
+- TASK-012: ML интеграция rubert-tiny2 (depends on TASK-004, TASK-008 — оба done); после реализации добавить вызов bulk_generate_embeddings в do_import
+- TASK-011: Groups API (depends on TASK-008 — done)
+- TASK-010: Экспорт в Excel (depends on TASK-008 — done)
+**Заметки для следующей итерации:**
+- ExcelImportService._load_dicts грузит активные словари; при импорте справочниковые значения ищутся по name.lower()
+- do_import использует session.add_all + один commit (для скорости 1500 строк)
+- ProjectSource.auto используется для импортированных проектов
+- build_template_xlsx() — без зависимости от DB, чистая функция, опасен только для тестирования шаблона
+
+---
+
 ## Итерация 0 — Инициализация
 **Фича:** Настройка проекта
 **Статус:** Ожидает начала
