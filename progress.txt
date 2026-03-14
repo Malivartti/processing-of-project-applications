@@ -358,6 +358,26 @@
 
 ---
 
+## Итерация 15 — 2026-03-15
+**Фича:** TASK-019 — Фронтенд: чекбоксы для массового выделения и создание ручной группы
+**Статус:** Завершено
+**Что сделано:**
+- frontend/src/api/groups.ts: добавлены GroupCreate и ConflictingProject интерфейсы; метод groupsApi.create(body)
+- frontend/src/components/CreateGroupDialog.vue: el-dialog с el-form (name обязательное, description опциональное); показывает предупреждение при 409 конфликте — список конфликтующих проектов с именами групп; emit 'created' после успеха
+- frontend/src/views/ProjectsView.vue: добавлена колонка type="selection" (el-table); @selection-change → checkedRows ref; плавающая панель (.float-actions с position: fixed) — появляется при checkedRows.length ≥ 2; кнопки 'Создать группу', 'Добавить в отбор', 'Сбросить'; CSS transition float-panel (opacity + translateY); tableRef для clearSelection()
+- ruff OK, pytest 84 passed
+**Следующие шаги:**
+- TASK-020: Режим 'Группы' — аккордеон (depends on TASK-017, TASK-011 — both done)
+- TASK-021: Кнопка 'Найти похожие' + прогресс-бар (depends on TASK-014, TASK-017 — both done)
+- TASK-010: Экспорт в Excel (depends on TASK-008 — done)
+**Заметки для следующей итерации:**
+- CreateGroupDialog: конфликт приходит в err.response.data.detail.conflicting (массив {project_id, group_id, group_name})
+- tableRef.clearSelection() сбрасывает чекбоксы без reload данных
+- float-actions: z-index: 100, position: fixed, bottom: 32px, translateX(-50%) от left: 50%
+- TASK-020 разблокирован (TASK-017, TASK-011 — done), нужен для TASK-022
+
+---
+
 ## Итерация 0 — Инициализация
 **Фича:** Настройка проекта
 **Статус:** Ожидает начала

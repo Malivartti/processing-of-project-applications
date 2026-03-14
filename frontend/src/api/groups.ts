@@ -17,9 +17,27 @@ export interface GroupRead {
   projects: GroupProjectItem[]
 }
 
+export interface GroupCreate {
+  name: string
+  description?: string | null
+  project_ids: string[]
+  context?: string
+}
+
+export interface ConflictingProject {
+  project_id: string
+  group_id: string
+  group_name: string
+}
+
 export const groupsApi = {
   async getById(id: string): Promise<GroupRead> {
     const { data } = await apiClient.get<GroupRead>(`/groups/${id}`)
+    return data
+  },
+
+  async create(body: GroupCreate): Promise<GroupRead> {
+    const { data } = await apiClient.post<GroupRead>('/groups', body)
     return data
   },
 

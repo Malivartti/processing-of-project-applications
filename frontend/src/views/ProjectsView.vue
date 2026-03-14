@@ -5,6 +5,13 @@
       @close="selectedProjectId = null"
       @updated="onPanelUpdated"
     />
+
+    <CreateGroupDialog
+      v-model="showCreateGroup"
+      :selected-projects="checkedRows"
+      @created="onGroupCreated"
+    />
+
     <!-- Stats header -->
     <el-row :gutter="16" class="stats-row">
       <el-col :span="8">
@@ -25,13 +32,17 @@
 
     <!-- Table -->
     <el-table
+      ref="tableRef"
       v-loading="store.loading"
       :data="store.items"
       style="width: 100%; margin-top: 12px"
       stripe
       highlight-current-row
       @row-click="onRowClick"
+      @selection-change="onSelectionChange"
     >
+      <el-table-column type="selection" width="48" @click.stop />
+
       <el-table-column prop="title" label="Название" min-width="280" show-overflow-tooltip />
 
       <el-table-column label="Направление" width="200" show-overflow-tooltip>
@@ -85,15 +96,29 @@
         @size-change="onSizeChange"
       />
     </div>
+
+    <!-- Floating action panel -->
+    <transition name="float-panel">
+      <div v-if="checkedRows.length >= 2" class="float-actions">
+        <span class="float-label">Выбрано: {{ checkedRows.length }}</span>
+        <el-button type="primary" size="small" @click="openCreateGroup">Создать группу</el-button>
+        <el-button size="small" @click="addToSelection">Добавить в отбор</el-button>
+        <el-button size="small" @click="clearChecked">Сбросить</el-button>
+      </div>
+    </transition>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import type { TableInstance } from 'element-plus'
 import { useProjectsStore, type ProjectsFilters } from '../stores/projects'
+import { projectsApi, type ProjectListItem } from '../api/projects'
 import ProjectFilters from '../components/ProjectFilters.vue'
 import ProjectDetailPanel from '../components/ProjectDetailPanel.vue'
+import CreateGroupDialog from '../components/CreateGroupDialog.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -101,6 +126,42 @@ const store = useProjectsStore()
 
 const currentPage = ref(store.filters.page)
 const pageSize = ref(store.filters.limit)
+const tableRef = ref<TableInstance>()
+
+// Checked rows (for mass actions)
+const checkedRows = ref<ProjectListItem[]>([])
+const showCreateGroup = ref(false)
+
+function onSelectionChange(rows: ProjectListItem[]) {
+  checkedRows.value = rows
+}
+
+function openCreateGroup() {
+  showCreateGroup.value = true
+}
+
+function clearChecked() {
+  tableRef.value?.clearSelection()
+}
+
+async function addToSelection() {
+  const ids = checkedRows.value.map((r) => r.id)
+  try {
+    await Promise.all(ids.map((id) => projectsApi.select(id)))
+    ElMessage.success(`Добавлено в отбор: ${ids.length}`)
+    clearChecked()
+    store.fetchProjects()
+    store.fetchStats()
+  } catch {
+    // axios interceptor handles toast
+  }
+}
+
+async function onGroupCreated() {
+  clearChecked()
+  store.fetchProjects()
+  store.fetchStats()
+}
 
 // Group color palette
 const GROUP_COLORS = [
@@ -228,5 +289,38 @@ watch(
   display: flex;
   justify-content: flex-end;
   margin-top: 16px;
+}
+
+.float-actions {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #fff;
+  border: 1px solid #dcdfe6;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 100;
+}
+
+.float-label {
+  font-size: 14px;
+  color: #606266;
+  font-weight: 500;
+}
+
+.float-panel-enter-active,
+.float-panel-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.float-panel-enter-from,
+.float-panel-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(16px);
 }
 </style>
