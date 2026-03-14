@@ -145,7 +145,7 @@
         "Шаг 4: в консоли браузера нет ошибок"
       ],
       "dependencies": ["TASK-001"],
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": "TASK-007",

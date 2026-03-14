@@ -286,6 +286,26 @@
 
 ---
 
+## Итерация 12 — 2026-03-15
+**Фича:** TASK-006 — Инициализация Vue 3 фронтенда
+**Статус:** Завершено
+**Что сделано:**
+- frontend/src/stores/index.ts, components/index.ts, composables/index.ts, utils/index.ts — созданы пустые placeholder-файлы
+- frontend/src/api/client.ts: добавлен import ElMessage; interceptor.response.error теперь вызывает ElMessage.error() с текстом из detail/message/message поля ответа
+- frontend/vite.config.ts: убран лишний rewrite (path.replace(/^\/api/, '')) — прокси /api теперь прозрачно форвардит запросы к backend:8000/api/* без потери префикса
+- ruff OK, pytest 84 passed
+**Следующие шаги:**
+- TASK-017: Фронтенд список проектов (depends on TASK-006, TASK-008 — оба done, критический приоритет)
+- TASK-010: Экспорт в Excel (depends on TASK-008 — done)
+- TASK-015: Отклонение рекомендаций (depends on TASK-014 — done)
+**Заметки для следующей итерации:**
+- TASK-017 теперь разблокирован — все его зависимости (TASK-006, TASK-008) имеют статус done
+- vite.config.ts proxy: /api → http://backend:8000 (без rewrite), так как backend роуты включают /api prefix (например /api/projects)
+- ElMessage импортируется из element-plus; уже подключён глобально в main.ts через app.use(ElementPlus)
+- stores/, components/, composables/, utils/ — пустые index.ts, наполнить в TASK-017+
+
+---
+
 ## Итерация 0 — Инициализация
 **Фича:** Настройка проекта
 **Статус:** Ожидает начала
