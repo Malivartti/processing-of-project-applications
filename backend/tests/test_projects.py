@@ -9,11 +9,16 @@ from app.database import get_db
 from app.main import app
 from app.models import GroupContext, GroupSource, ProjectSource
 from app.schemas.project import (
+    DirectionInfo,
     GroupInfo,
     ProjectListResponse,
     ProjectRead,
     StatsCounters,
+    TRLLevelInfo,
 )
+
+_DIRECTION = DirectionInfo(id=uuid.uuid4(), name="Информационные технологии")
+_TRL = TRLLevelInfo(id=uuid.uuid4(), name="УГТ 3", level=3)
 
 
 def make_project_read(
@@ -24,19 +29,30 @@ def make_project_read(
     return ProjectRead(
         id=uuid.uuid4(),
         title=title,
+        direction=_DIRECTION,
+        is_ongoing=False,
+        priority_direction=None,
+        implementation_period="12 месяцев",
+        relevance="Актуальность проекта",
         problem="Problem text",
         goal="Goal text",
+        key_tasks="Ключевые задачи",
         expected_result="Result text",
-        is_ongoing=False,
+        trl_level=_TRL,
+        budget=100000,
+        support_master_classes=False,
+        support_consultations=False,
+        support_equipment=False,
+        support_product_samples=False,
+        support_materials=False,
+        support_software_licenses=False,
+        support_project_site=False,
+        support_internship=False,
+        non_financial_support=None,
+        participants_count=5,
         is_selected=is_selected,
         is_auto_checked=False,
         source=ProjectSource.manual,
-        direction_id=None,
-        direction_name=None,
-        priority_direction_id=None,
-        priority_direction_name=None,
-        trl_id=None,
-        trl_name=None,
         group=group,
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
@@ -54,10 +70,11 @@ def make_list_response(count: int = 2) -> ProjectListResponse:
             is_selected=False,
             is_auto_checked=False,
             source=ProjectSource.manual,
-            direction_id=None,
-            direction_name=None,
+            direction_id=_DIRECTION.id,
+            direction_name=_DIRECTION.name,
             priority_direction_id=None,
-            trl_id=None,
+            trl_id=_TRL.id,
+            participants_count=5,
             group_id=None,
             group_name=None,
             group_source=None,
@@ -168,6 +185,20 @@ async def test_get_project_not_found(mock_db):
 @pytest.mark.asyncio
 async def test_create_project(mock_db):
     project = make_project_read("New Project")
+    payload = {
+        "title": "New Project",
+        "direction_id": str(_DIRECTION.id),
+        "is_ongoing": False,
+        "implementation_period": "12 месяцев",
+        "relevance": "Актуальность",
+        "problem": "Проблема",
+        "goal": "Цель",
+        "key_tasks": "Задачи",
+        "expected_result": "Результат",
+        "trl_id": str(_TRL.id),
+        "budget": 100000,
+        "participants_count": 5,
+    }
     with patch("app.api.projects.ProjectService") as MockService:
         MockService.return_value.create = AsyncMock(return_value=project)
         app.dependency_overrides[get_db] = lambda: mock_db
@@ -175,9 +206,7 @@ async def test_create_project(mock_db):
             async with AsyncClient(
                 transport=ASGITransport(app=app), base_url="http://test"
             ) as client:
-                response = await client.post(
-                    "/api/projects", json={"title": "New Project", "is_ongoing": False}
-                )
+                response = await client.post("/api/projects", json=payload)
             assert response.status_code == 201
             assert response.json()["title"] == "New Project"
         finally:

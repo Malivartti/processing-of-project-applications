@@ -11,15 +11,17 @@ class TextProcessingUtils:
     @staticmethod
     def prepare_text(
         title: str,
-        problem: str | None = None,
-        goal: str | None = None,
-        expected_result: str | None = None,
+        relevance: str = "",
+        problem: str = "",
+        goal: str = "",
+        key_tasks: str = "",
+        expected_result: str = "",
     ) -> str:
         """Concatenate project fields, lowercase, and strip noise.
 
-        Fields: title + problem + goal + expected_result joined with a space.
+        Fields: title + relevance + problem + goal + key_tasks + expected_result.
         """
-        parts = [title or "", problem or "", goal or "", expected_result or ""]
+        parts = [title, relevance, problem, goal, key_tasks, expected_result]
         text = " ".join(p for p in parts if p)
         text = text.lower()
         text = TextProcessingUtils._CLEAN_RE.sub(" ", text)

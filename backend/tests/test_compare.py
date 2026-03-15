@@ -9,7 +9,7 @@ import pytest
 
 from app.models import ProjectSource
 from app.schemas.compare import CompareResponse
-from app.schemas.project import ProjectRead
+from app.schemas.project import DirectionInfo, ProjectRead, TRLLevelInfo
 from app.services.compare import (
     CompareService,
     _cosine_score,
@@ -68,11 +68,13 @@ class TestCosineScore:
 # ---------------------------------------------------------------------------
 
 
-def _mock_project(title="", problem=None, goal=None, expected_result=None):
+def _mock_project(title="", relevance=None, problem=None, goal=None, key_tasks=None, expected_result=None):
     p = MagicMock()
     p.title = title
+    p.relevance = relevance
     p.problem = problem
     p.goal = goal
+    p.key_tasks = key_tasks
     p.expected_result = expected_result
     return p
 
@@ -109,23 +111,38 @@ class TestGetKeywords:
 # ---------------------------------------------------------------------------
 
 
+_DIRECTION = DirectionInfo(id=uuid.uuid4(), name="Информационные технологии")
+_TRL = TRLLevelInfo(id=uuid.uuid4(), name="УГТ 3", level=3)
+
+
 def _make_project_read(title="Test"):
     return ProjectRead(
         id=uuid.uuid4(),
         title=title,
+        direction=_DIRECTION,
+        is_ongoing=False,
+        priority_direction=None,
+        implementation_period="12 месяцев",
+        relevance="Актуальность",
         problem="Описание проблемы",
         goal="Цель проекта",
+        key_tasks="Ключевые задачи",
         expected_result="Ожидаемый результат",
-        is_ongoing=False,
+        trl_level=_TRL,
+        budget=100000,
+        support_master_classes=False,
+        support_consultations=False,
+        support_equipment=False,
+        support_product_samples=False,
+        support_materials=False,
+        support_software_licenses=False,
+        support_project_site=False,
+        support_internship=False,
+        non_financial_support=None,
+        participants_count=5,
         is_selected=False,
         is_auto_checked=False,
         source=ProjectSource.manual,
-        direction_id=None,
-        direction_name=None,
-        priority_direction_id=None,
-        priority_direction_name=None,
-        trl_id=None,
-        trl_name=None,
         group=None,
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
@@ -150,6 +167,8 @@ class TestCompareService:
             pa_orm = MagicMock()
             pa_orm.id = pa_id
             pa_orm.title = "A"
+            pa_orm.relevance = None
+            pa_orm.key_tasks = None
             pa_orm.problem = None
             pa_orm.goal = None
             pa_orm.expected_result = None
@@ -158,6 +177,8 @@ class TestCompareService:
             pb_orm = MagicMock()
             pb_orm.id = pb_id
             pb_orm.title = "B"
+            pb_orm.relevance = None
+            pb_orm.key_tasks = None
             pb_orm.problem = None
             pb_orm.goal = None
             pb_orm.expected_result = None
@@ -202,6 +223,8 @@ class TestCompareService:
             pa_orm = MagicMock()
             pa_orm.id = pa_id
             pa_orm.title = "A"
+            pa_orm.relevance = None
+            pa_orm.key_tasks = None
             pa_orm.problem = None
             pa_orm.goal = None
             pa_orm.expected_result = None
@@ -210,6 +233,8 @@ class TestCompareService:
             pb_orm = MagicMock()
             pb_orm.id = pb_id
             pb_orm.title = "B"
+            pb_orm.relevance = None
+            pb_orm.key_tasks = None
             pb_orm.problem = None
             pb_orm.goal = None
             pb_orm.expected_result = None
@@ -249,6 +274,8 @@ class TestCompareService:
             pa_orm = MagicMock()
             pa_orm.id = pa_id
             pa_orm.title = "разработка системы"
+            pa_orm.relevance = None
+            pa_orm.key_tasks = None
             pa_orm.problem = None
             pa_orm.goal = None
             pa_orm.expected_result = None
@@ -257,6 +284,8 @@ class TestCompareService:
             pb_orm = MagicMock()
             pb_orm.id = pb_id
             pb_orm.title = "создание платформы"
+            pb_orm.relevance = None
+            pb_orm.key_tasks = None
             pb_orm.problem = None
             pb_orm.goal = None
             pb_orm.expected_result = None

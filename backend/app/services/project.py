@@ -6,13 +6,16 @@ from app.exceptions import NotFoundError
 from app.models import Project
 from app.repositories.project import ProjectFilters, ProjectRepo
 from app.schemas.project import (
+    DirectionInfo,
     GroupInfo,
+    PriorityDirectionInfo,
     ProjectCreate,
     ProjectListItem,
     ProjectListResponse,
     ProjectRead,
     ProjectUpdate,
     StatsCounters,
+    TRLLevelInfo,
 )
 
 
@@ -29,9 +32,10 @@ class ProjectService:
             is_auto_checked=project.is_auto_checked,
             source=project.source,
             direction_id=project.direction_id,
-            direction_name=project.direction.name if project.direction else None,
+            direction_name=project.direction.name,
             priority_direction_id=project.priority_direction_id,
             trl_id=project.trl_id,
+            participants_count=project.participants_count,
             group_id=project.group_id,
             group_name=project.group.name if project.group else None,
             group_source=project.group.source if project.group else None,
@@ -48,24 +52,43 @@ class ProjectService:
                 context=project.group.context,
                 is_confirmed=project.group.is_confirmed,
             )
+        priority_direction_info = None
+        if project.priority_direction:
+            priority_direction_info = PriorityDirectionInfo(
+                id=project.priority_direction.id,
+                name=project.priority_direction.name,
+            )
         return ProjectRead(
             id=project.id,
             title=project.title,
+            direction=DirectionInfo(id=project.direction.id, name=project.direction.name),
+            is_ongoing=project.is_ongoing,
+            priority_direction=priority_direction_info,
+            implementation_period=project.implementation_period,
+            relevance=project.relevance,
             problem=project.problem,
             goal=project.goal,
+            key_tasks=project.key_tasks,
             expected_result=project.expected_result,
-            is_ongoing=project.is_ongoing,
+            trl_level=TRLLevelInfo(
+                id=project.trl_level.id,
+                name=project.trl_level.name,
+                level=project.trl_level.level,
+            ),
+            budget=project.budget,
+            support_master_classes=project.support_master_classes,
+            support_consultations=project.support_consultations,
+            support_equipment=project.support_equipment,
+            support_product_samples=project.support_product_samples,
+            support_materials=project.support_materials,
+            support_software_licenses=project.support_software_licenses,
+            support_project_site=project.support_project_site,
+            support_internship=project.support_internship,
+            non_financial_support=project.non_financial_support,
+            participants_count=project.participants_count,
             is_selected=project.is_selected,
             is_auto_checked=project.is_auto_checked,
             source=project.source,
-            direction_id=project.direction_id,
-            direction_name=project.direction.name if project.direction else None,
-            priority_direction_id=project.priority_direction_id,
-            priority_direction_name=(
-                project.priority_direction.name if project.priority_direction else None
-            ),
-            trl_id=project.trl_id,
-            trl_name=project.trl_level.name if project.trl_level else None,
             group=group_info,
             created_at=project.created_at,
             updated_at=project.updated_at,

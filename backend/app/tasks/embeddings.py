@@ -49,7 +49,7 @@ def bulk_generate_embeddings(project_ids: list[str]) -> dict:
         svc = EmbeddingService(model)
         texts = [
             TextProcessingUtils.prepare_text(
-                p.title, p.problem, p.goal, p.expected_result
+                p.title, p.relevance, p.problem, p.goal, p.key_tasks, p.expected_result
             )
             for p in projects
         ]

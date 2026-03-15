@@ -12,12 +12,14 @@ from app.utils.text import TextProcessingUtils
 
 
 def test_prepare_text_basic():
-    result = TextProcessingUtils.prepare_text("Проект ИИ", "Проблема", "Цель", "Результат")
-    assert result == "проект ии проблема цель результат"
+    result = TextProcessingUtils.prepare_text(
+        "Проект ИИ", "Актуальность", "Проблема", "Цель", "Задачи", "Результат"
+    )
+    assert result == "проект ии актуальность проблема цель задачи результат"
 
 
 def test_prepare_text_removes_punctuation():
-    result = TextProcessingUtils.prepare_text("Проект: ИИ!", "Проблема?")
+    result = TextProcessingUtils.prepare_text("Проект: ИИ!", problem="Проблема?")
     assert "!" not in result
     assert ":" not in result
     assert "?" not in result
@@ -29,13 +31,13 @@ def test_prepare_text_none_fields():
 
 
 def test_prepare_text_collapses_whitespace():
-    result = TextProcessingUtils.prepare_text("  много   пробелов  ", "  тест  ")
+    result = TextProcessingUtils.prepare_text("  много   пробелов  ", relevance="  тест  ")
     assert "  " not in result
     assert result == result.strip()
 
 
 def test_prepare_text_empty_optional_fields():
-    result = TextProcessingUtils.prepare_text("Название", None, None, None)
+    result = TextProcessingUtils.prepare_text("Название")
     assert result == "название"
 
 

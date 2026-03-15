@@ -54,10 +54,12 @@ def _extract_lemmas(text: str) -> set[str]:
 
 def _project_text(project: Project) -> str:
     parts = [
-        project.title or "",
-        project.problem or "",
-        project.goal or "",
-        project.expected_result or "",
+        project.title,
+        project.relevance,
+        project.problem,
+        project.goal,
+        project.key_tasks,
+        project.expected_result,
     ]
     return " ".join(p for p in parts if p)
 

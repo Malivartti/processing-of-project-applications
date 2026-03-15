@@ -115,28 +115,56 @@ class Project(Base):
     __tablename__ = "projects"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    title: Mapped[str] = mapped_column(String(512), nullable=False)
-    problem: Mapped[str | None] = mapped_column(Text, nullable=True)
-    goal: Mapped[str | None] = mapped_column(Text, nullable=True)
-    expected_result: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # --- Обязательные поля формы ---
+    title: Mapped[str] = mapped_column(String(80), nullable=False)
+    direction_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("directions.id", ondelete="RESTRICT"), nullable=False
+    )
     is_ongoing: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Принадлежность к приоритетному направлению (необязательное)
+    priority_direction_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("priority_directions.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    implementation_period: Mapped[str] = mapped_column(String(100), nullable=False)
+    relevance: Mapped[str] = mapped_column(Text, nullable=False)
+    problem: Mapped[str] = mapped_column(Text, nullable=False)
+    goal: Mapped[str] = mapped_column(Text, nullable=False)
+    key_tasks: Mapped[str] = mapped_column(Text, nullable=False)
+    expected_result: Mapped[str] = mapped_column(Text, nullable=False)
+    trl_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("trl_levels.id", ondelete="RESTRICT"), nullable=False
+    )
+    budget: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
+
+    # --- Чекбоксы: образовательные и экспертные ресурсы ---
+    support_master_classes: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    support_consultations: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+    # --- Чекбоксы: инфраструктура и оборудование ---
+    support_equipment: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    support_product_samples: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    support_materials: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    support_software_licenses: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+    # --- Чекбоксы: рабочие площадки и стажировки ---
+    support_project_site: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    support_internship: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+    # --- Уточнение нефинансовой поддержки (необязательное) ---
+    non_financial_support: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    participants_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    # --- Системные поля ---
     is_selected: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     is_auto_checked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     source: Mapped[ProjectSource] = mapped_column(
         Enum(ProjectSource, name="project_source_enum"),
         nullable=False,
         default=ProjectSource.manual,
-    )
-    direction_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("directions.id", ondelete="SET NULL"), nullable=True
-    )
-    priority_direction_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("priority_directions.id", ondelete="SET NULL"),
-        nullable=True,
-    )
-    trl_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("trl_levels.id", ondelete="SET NULL"), nullable=True
     )
     group_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("groups.id", ondelete="SET NULL"), nullable=True
@@ -149,19 +177,21 @@ class Project(Base):
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
     )
 
-    direction: Mapped[Direction | None] = relationship("Direction", back_populates="projects")
+    direction: Mapped[Direction] = relationship("Direction", back_populates="projects")
     priority_direction: Mapped[PriorityDirection | None] = relationship(
         "PriorityDirection", back_populates="projects"
     )
-    trl_level: Mapped[TRLLevel | None] = relationship("TRLLevel", back_populates="projects")
+    trl_level: Mapped[TRLLevel] = relationship("TRLLevel", back_populates="projects")
     group: Mapped[Group | None] = relationship("Group", back_populates="projects")
 
     __table_args__ = (
         Index(
             "ix_projects_fts",
             sa.text(
-                "to_tsvector('russian', coalesce(title,'') || ' ' || coalesce(problem,'') || ' '"
-                " || coalesce(goal,'') || ' ' || coalesce(expected_result,''))"
+                "to_tsvector('russian', "
+                "coalesce(title,'') || ' ' || coalesce(relevance,'') || ' ' || "
+                "coalesce(problem,'') || ' ' || coalesce(goal,'') || ' ' || "
+                "coalesce(key_tasks,'') || ' ' || coalesce(expected_result,''))"
             ),
             postgresql_using="gin",
         ),

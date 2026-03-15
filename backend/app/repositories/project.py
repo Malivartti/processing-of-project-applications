@@ -57,8 +57,10 @@ class ProjectRepo:
         if filters.search:
             q = q.where(
                 sa.text(
-                    "to_tsvector('russian', coalesce(title,'') || ' ' || coalesce(problem,'') || ' '"
-                    " || coalesce(goal,'') || ' ' || coalesce(expected_result,'')) @@ "
+                    "to_tsvector('russian', "
+                    "coalesce(title,'') || ' ' || coalesce(relevance,'') || ' ' || "
+                    "coalesce(problem,'') || ' ' || coalesce(goal,'') || ' ' || "
+                    "coalesce(key_tasks,'') || ' ' || coalesce(expected_result,'')) @@ "
                     "plainto_tsquery('russian', :search)"
                 ).bindparams(search=filters.search)
             )
