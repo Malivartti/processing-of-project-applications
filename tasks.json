@@ -653,7 +653,7 @@
         "Шаг 3: docker compose logs backup — расписание активно"
       ],
       "dependencies": ["TASK-003"],
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": "TASK-030",

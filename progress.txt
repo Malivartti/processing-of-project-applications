@@ -685,6 +685,25 @@
 
 ---
 
+## Итерация 29 — 2026-03-15
+**Фича:** TASK-029 — Резервное копирование PostgreSQL: ежедневный бэкап в Docker volume
+**Статус:** Завершено
+**Что сделано:**
+- backup/backup.sh: pg_dump -Fc (custom format) + gzip → /backups/ppa_YYYYMMDD_HHMMSS.dump.gz; удаление файлов старше 30 дней через find -mtime +30 -delete
+- backup/Dockerfile: postgres:16-alpine + dcron; crontab — запуск backup.sh ежедневно в 3:00 UTC; crond -f в качестве CMD
+- docker-compose.yml: добавлен сервис backup (depends_on db healthy); добавлен volume backups для хранения дампов
+- backup/RESTORE.md: документация восстановления через pg_restore (в prod БД и тестовую БД), инструкция ручного запуска, описание формата файлов
+- ruff OK, pytest 125 passed (без изменений в Python-коде)
+**Следующие шаги:**
+- TASK-030: End-to-end тест: полный рабочий цикл от импорта до экспорта (последняя оставшаяся задача)
+**Заметки для следующей итерации:**
+- backup.sh использует PGPASSWORD env var (передаётся в docker-compose через PGPASSWORD: ${POSTGRES_PASSWORD:-ppa_secret})
+- Запуск вручную: docker compose exec backup /backup.sh
+- Формат дампа: custom format (-Fc) — восстанавливается через pg_restore (не psql), поддерживает выборочное восстановление таблиц
+- TASK-030 — единственная оставшаяся задача; требует scenarios/e2e_scenario.md и тест-файл test_projects_50.xlsx
+
+---
+
 ## Итерация 0 — Инициализация
 **Фича:** Настройка проекта
 **Статус:** Ожидает начала
