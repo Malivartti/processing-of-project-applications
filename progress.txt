@@ -666,6 +666,25 @@
 
 ---
 
+## Итерация 28 — 2026-03-15
+**Фича:** TASK-027 — Фронтенд: вкладка 'Справочники' — управление значениями
+**Статус:** Завершено
+**Что сделано:**
+- frontend/src/api/dictionaries.ts: добавлены методы create(type, name, level), update(type, id, name, level), deactivate(type, id); экспортирован тип DictionaryType
+- frontend/src/components/DictionaryEditor.vue: переиспользуемый компонент для управления справочником — el-table со всеми строками (активными и деактивированными), inline-редактирование (editingId), кнопки Edit/Delete (деактивация через ElMessageBox.confirm), поле добавления новой строки с Enter и кнопкой; prop showLevel для trl_levels
+- frontend/src/views/DictionariesView.vue: el-tabs с тремя вкладками (Направления, Приоритетные направления, УГТ); DictionaryEditor подключён с нужными props
+- ruff OK, pytest 125 passed
+**Следующие шаги:**
+- TASK-029: Резервное копирование PostgreSQL (medium, depends on TASK-003 — done)
+- TASK-030: End-to-end тест (medium, depends on TASK-024, TASK-025 — done)
+**Заметки для следующей итерации:**
+- DictionaryEditor загружает все записи (activeOnly=false) — деактивированные показываются серым
+- Деактивация делает оптимистичный update is_active=false в items ref без reload
+- showLevel prop: true только для trl_levels — показывает колонку Уровень и поле ввода el-input-number
+- TASK-029: создать backup.sh (pg_dump), Docker-сервис backup или cron-service, документация восстановления
+
+---
+
 ## Итерация 0 — Инициализация
 **Фича:** Настройка проекта
 **Статус:** Ожидает начала

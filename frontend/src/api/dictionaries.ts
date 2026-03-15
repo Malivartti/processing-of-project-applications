@@ -8,14 +8,35 @@ export interface DictionaryItem {
   level?: number | null
 }
 
+export type DictionaryType = 'directions' | 'priority_directions' | 'trl_levels'
+
 export const dictionariesApi = {
-  async getAll(
-    type: 'directions' | 'priority_directions' | 'trl_levels',
-    activeOnly = true,
-  ): Promise<DictionaryItem[]> {
+  async getAll(type: DictionaryType, activeOnly = true): Promise<DictionaryItem[]> {
     const { data } = await apiClient.get<DictionaryItem[]>(`/dictionaries/${type}`, {
       params: activeOnly ? { active_only: true } : {},
     })
     return data
+  },
+
+  async create(type: DictionaryType, name: string, level?: number | null): Promise<DictionaryItem> {
+    const { data } = await apiClient.post<DictionaryItem>(`/dictionaries/${type}`, { name, level })
+    return data
+  },
+
+  async update(
+    type: DictionaryType,
+    id: string,
+    name: string,
+    level?: number | null,
+  ): Promise<DictionaryItem> {
+    const { data } = await apiClient.patch<DictionaryItem>(`/dictionaries/${type}/${id}`, {
+      name,
+      level,
+    })
+    return data
+  },
+
+  async deactivate(type: DictionaryType, id: string): Promise<void> {
+    await apiClient.delete(`/dictionaries/${type}/${id}`)
   },
 }
