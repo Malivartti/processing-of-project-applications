@@ -56,6 +56,15 @@
         <template v-else>
           <el-button size="small" @click="showImportDialog = true">Импорт</el-button>
           <el-button
+            size="small"
+            type="danger"
+            plain
+            :loading="clearingAll"
+            @click="clearAllProjects"
+          >
+            Очистить все
+          </el-button>
+          <el-button
             type="primary"
             size="small"
             @click="showGroupingDialog = true"
@@ -171,7 +180,7 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import type { TableInstance } from 'element-plus'
 import { useProjectsStore, type ProjectsFilters, type ViewMode } from '../stores/projects'
 import { projectsApi, type ProjectListItem } from '../api/projects'
@@ -201,6 +210,7 @@ const showImportDialog = ref(false)
 const showCompare = ref(false)
 const compareIds = ref<[string, string] | null>(null)
 const activeRunId = ref<string | null>(null)
+const clearingAll = ref(false)
 
 function onSelectionChange(rows: ProjectListItem[]) {
   checkedRows.value = rows
@@ -260,6 +270,36 @@ function onGroupingError(message: string) {
 function onImported() {
   store.fetchProjects()
   store.fetchStats()
+}
+
+async function clearAllProjects() {
+  try {
+    await ElMessageBox.confirm(
+      'Будут удалены все проекты, группы и результаты группировки. Это действие необратимо. Продолжить?',
+      'Очистить все проекты',
+      {
+        confirmButtonText: 'Удалить всё',
+        cancelButtonText: 'Отмена',
+        type: 'warning',
+        confirmButtonClass: 'el-button--danger',
+      },
+    )
+  } catch {
+    return
+  }
+  clearingAll.value = true
+  try {
+    const deleted = await projectsApi.deleteAll()
+    ElMessage.success(`Удалено проектов: ${deleted}`)
+    clearChecked()
+    store.fetchProjects()
+    store.fetchStats()
+    if (store.viewMode === 'groups') store.fetchGroupsMode()
+  } catch {
+    // axios interceptor handles toast
+  } finally {
+    clearingAll.value = false
+  }
 }
 
 async function onGroupCreated() {

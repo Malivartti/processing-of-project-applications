@@ -135,6 +135,9 @@ class ProjectService:
         if not deleted:
             raise NotFoundError(detail=f"Project {project_id} not found")
 
+    async def delete_all(self) -> int:
+        return await self.repo.delete_all()
+
     async def set_selected(self, project_id: uuid.UUID, is_selected: bool) -> ProjectRead:
         project = await self.repo.set_selected(project_id, is_selected)
         if project is None:

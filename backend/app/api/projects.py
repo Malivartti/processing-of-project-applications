@@ -163,6 +163,15 @@ async def update_project(
     return await service.update(project_id, body)
 
 
+@router.delete("/api/projects", status_code=200)
+async def delete_all_projects(
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    service = ProjectService(db)
+    deleted = await service.delete_all()
+    return {"deleted": deleted}
+
+
 @router.delete("/api/projects/{project_id}", status_code=204)
 async def delete_project(
     project_id: uuid.UUID,

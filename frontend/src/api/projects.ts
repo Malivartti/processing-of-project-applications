@@ -121,6 +121,11 @@ export const projectsApi = {
     return data
   },
 
+  async deleteAll(): Promise<number> {
+    const { data } = await apiClient.delete<{ deleted: number }>('/projects')
+    return data.deleted
+  },
+
   exportUrl(context: 'all' | 'filtered' | 'selected' | 'grouped', filters?: ProjectFilters): string {
     const base = (apiClient.defaults.baseURL ?? '') + '/projects/export'
     const params = new URLSearchParams({ context })

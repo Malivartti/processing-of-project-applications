@@ -129,6 +129,11 @@ class ProjectRepo:
         await self.session.commit()
         return True
 
+    async def delete_all(self) -> int:
+        result = await self.session.execute(sa.delete(Project))
+        await self.session.commit()
+        return result.rowcount
+
     async def set_selected(self, project_id: uuid.UUID, is_selected: bool) -> Project | None:
         return await self.update(project_id, {"is_selected": is_selected})
 
