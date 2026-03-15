@@ -551,6 +551,33 @@
 
 ---
 
+## Итерация 23 — 2026-03-15
+**Фича:** TASK-016 — Сравнение двух проектов side-by-side с подсветкой ключевых слов
+**Статус:** Завершено
+**Что сделано:**
+- backend/app/schemas/compare.py: CompareResponse (project_a, project_b, score, keywords)
+- backend/app/services/compare.py: CompareService с тремя методами:
+  - compare(id_a, id_b) — загружает оба проекта, вычисляет score и keywords
+  - _get_score: сначала ищет в similarity_scores (любой порядок a/b), при отсутствии вычисляет cosine on-the-fly из embeddings, возвращает None если нет embeddings
+  - _get_keywords (module-level): лемматизация через pymorphy3, фильтр NOUN/VERB/INFN, длина > 3, stop-lemmas, пересечение двух проектов
+- backend/app/api/projects.py: GET /api/projects/compare?a={id}&b={id} — зарегистрирован ДО /{project_id}
+- backend/tests/test_compare.py: 17 тестов — _extract_lemmas (4), _cosine_score (3), _get_keywords (4), CompareService (4), API endpoint (2)
+- ruff OK, pytest 121 passed
+**Следующие шаги:**
+- TASK-023: Фронтенд сравнение side-by-side (depends on TASK-016 — now done, TASK-019 — done)
+- TASK-026: История группировки UI (depends on TASK-014, TASK-006 — done, medium)
+- TASK-027: Справочники UI (depends on TASK-007, TASK-006 — done, medium)
+- TASK-005: Nginx конфигурация (pending, high)
+- TASK-028: Rate limiting (depends on TASK-014, TASK-005 — TASK-005 pending)
+**Заметки для следующей итерации:**
+- _KEEP_POS = {"NOUN", "VERB", "INFN"} — INFN для инфинитивов в pymorphy3
+- _MIN_LEN = 4 (> 3 chars requirement) — сравнение len(lemma) <= _MIN_LEN - 1
+- CompareService._get_score: OR condition через sqlalchemy or_() для двух направлений пары
+- _morph = pymorphy3.MorphAnalyzer() — глобальный instance, не создавать в каждом вызове
+- TASK-023 теперь разблокирован (TASK-016 done, TASK-019 done)
+
+---
+
 ## Итерация 0 — Инициализация
 **Фича:** Настройка проекта
 **Статус:** Ожидает начала

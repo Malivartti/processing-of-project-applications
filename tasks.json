@@ -373,7 +373,7 @@
         "Шаг 4: для несхожих проектов score < 0.5, keywords минимальны"
       ],
       "dependencies": ["TASK-012"],
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": "TASK-017",

@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models import GroupSource
 from app.repositories.project import ProjectFilters
+from app.schemas.compare import CompareResponse
 from app.schemas.excel_import import ImportPreviewResponse
 from app.schemas.project import (
     ProjectCreate,
@@ -15,6 +16,7 @@ from app.schemas.project import (
     ProjectUpdate,
     StatsCounters,
 )
+from app.services.compare import CompareService
 from app.services.excel_export import ExcelExportService, ExportContext
 from app.services.excel_import import ExcelImportService, build_template_xlsx
 from app.services.project import ProjectService
@@ -114,6 +116,16 @@ async def import_projects(
             duplicates=preview.duplicates,
         )
     return preview
+
+
+@router.get("/api/projects/compare", response_model=CompareResponse)
+async def compare_projects(
+    a: uuid.UUID = Query(...),
+    b: uuid.UUID = Query(...),
+    db: AsyncSession = Depends(get_db),
+) -> CompareResponse:
+    service = CompareService(db)
+    return await service.compare(a, b)
 
 
 @router.get("/api/projects/{project_id}", response_model=ProjectRead)
