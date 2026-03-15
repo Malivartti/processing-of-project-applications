@@ -22,6 +22,11 @@
       @imported="onImported"
     />
 
+    <ComparisonSideBySide
+      v-model="showCompare"
+      :project-ids="compareIds"
+    />
+
     <!-- Stats header -->
     <el-row :gutter="16" class="stats-row">
       <el-col :span="8">
@@ -148,6 +153,13 @@
     <transition name="float-panel">
       <div v-if="store.viewMode === 'list' && checkedRows.length >= 2" class="float-actions">
         <span class="float-label">Выбрано: {{ checkedRows.length }}</span>
+        <el-button
+          v-if="checkedRows.length === 2"
+          size="small"
+          @click="openCompare"
+        >
+          Сравнить
+        </el-button>
         <el-button type="primary" size="small" @click="openCreateGroup">Создать группу</el-button>
         <el-button size="small" @click="addToSelection">Добавить в отбор</el-button>
         <el-button size="small" @click="clearChecked">Сбросить</el-button>
@@ -171,6 +183,7 @@ import GroupsAccordion from '../components/GroupsAccordion.vue'
 import GroupingRunDialog from '../components/GroupingRunDialog.vue'
 import GroupingProgressBar from '../components/GroupingProgressBar.vue'
 import ProjectImportDialog from '../components/ProjectImportDialog.vue'
+import ComparisonSideBySide from '../components/ComparisonSideBySide.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -185,6 +198,8 @@ const checkedRows = ref<ProjectListItem[]>([])
 const showCreateGroup = ref(false)
 const showGroupingDialog = ref(false)
 const showImportDialog = ref(false)
+const showCompare = ref(false)
+const compareIds = ref<[string, string] | null>(null)
 const activeRunId = ref<string | null>(null)
 
 function onSelectionChange(rows: ProjectListItem[]) {
@@ -197,6 +212,12 @@ function openCreateGroup() {
 
 function clearChecked() {
   tableRef.value?.clearSelection()
+}
+
+function openCompare() {
+  if (checkedRows.value.length !== 2) return
+  compareIds.value = [checkedRows.value[0].id, checkedRows.value[1].id]
+  showCompare.value = true
 }
 
 async function addToSelection() {

@@ -578,6 +578,28 @@
 
 ---
 
+## Итерация 24 — 2026-03-15
+**Фича:** TASK-023 — Фронтенд: сравнение двух проектов side-by-side
+**Статус:** Завершено
+**Что сделано:**
+- frontend/src/api/projects.ts: добавлены CompareResponse интерфейс и метод projectsApi.compare(idA, idB)
+- frontend/src/components/HighlightedText.vue: компонент подсветки ключевых слов — разбивает текст на части через RegExp, общие слова оборачивает в <mark> с жёлтым фоном (#fef08a)
+- frontend/src/components/ComparisonSideBySide.vue: el-dialog с сеткой 1fr 1px 1fr; сверху score (el-tag с цветом по порогу 0.8/0.6) + список ключевых слов; ProjectFields inline-компонент через defineComponent+h() для мета-полей и текстовых блоков с HighlightedText; загрузка через watch на projectIds/modelValue; el-skeleton при loading
+- frontend/src/views/ProjectsView.vue: добавлен showCompare ref, compareIds ref ([string,string]|null), openCompare(), кнопка 'Сравнить' в float-actions (visible только при checkedRows.length === 2); ComparisonSideBySide подключён
+- ruff OK, pytest 121 passed
+**Следующие шаги:**
+- TASK-026: История группировки UI (medium, depends on TASK-014, TASK-006 — оба done)
+- TASK-027: Справочники UI (medium, depends on TASK-007, TASK-006 — оба done)
+- TASK-005: Nginx HTTPS заглушка (high, nginx.conf уже создан с proxy и IP filter, не хватает HTTPS)
+- TASK-028: Rate limiting (high, depends on TASK-005 — pending)
+**Заметки для следующей итерации:**
+- ComparisonSideBySide использует defineComponent внутри <script setup> для ProjectFields — всё в одном файле, h() рендер для гибкости
+- HighlightedText принимает text (string|null) + keywords (string[]), работает через RegExp с escaped keywords
+- scoreType: score>=0.8 → 'danger', >=0.6 → 'warning', else → 'success' (оценка интуитивно понятна)
+- TASK-026 и TASK-027 разблокированы и имеют одинаковый (medium) приоритет
+
+---
+
 ## Итерация 0 — Инициализация
 **Фича:** Настройка проекта
 **Статус:** Ожидает начала

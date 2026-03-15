@@ -70,6 +70,13 @@ export interface ProjectRead {
   updated_at: string
 }
 
+export interface CompareResponse {
+  project_a: ProjectRead
+  project_b: ProjectRead
+  score: number | null
+  keywords: string[]
+}
+
 export const projectsApi = {
   async getList(filters: ProjectFilters = {}): Promise<ProjectListResponse> {
     const params: Record<string, unknown> = {
@@ -104,6 +111,13 @@ export const projectsApi = {
 
   async getById(id: string): Promise<ProjectRead> {
     const { data } = await apiClient.get<ProjectRead>(`/projects/${id}`)
+    return data
+  },
+
+  async compare(idA: string, idB: string): Promise<CompareResponse> {
+    const { data } = await apiClient.get<CompareResponse>('/projects/compare', {
+      params: { a: idA, b: idB },
+    })
     return data
   },
 
