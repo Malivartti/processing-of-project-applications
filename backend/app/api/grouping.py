@@ -102,9 +102,33 @@ async def get_grouping_history(
     db: AsyncSession = Depends(get_db),
 ) -> GroupingHistoryResponse:
     """Return history of grouping runs ordered by started_at desc."""
+    from app.models import Group, GroupSource
+
     result = await db.execute(
         sa.select(GroupingRun).order_by(GroupingRun.started_at.desc())
     )
-    runs = result.scalars().all()
-    items = [GroupingRunRead.model_validate(run) for run in runs]
+    runs = list(result.scalars().all())
+
+    # Compute confirmed_rate per context: confirmed auto-groups / total auto-groups
+    rate_result = await db.execute(
+        sa.select(
+            Group.context,
+            sa.func.count(Group.id).label("total"),
+            sa.func.sum(sa.cast(Group.is_confirmed, sa.Integer)).label("confirmed"),
+        )
+        .where(Group.source == GroupSource.auto)
+        .group_by(Group.context)
+    )
+    rates: dict[str, float | None] = {}
+    for row in rate_result:
+        total = row.total or 0
+        confirmed = row.confirmed or 0
+        rates[row.context.value] = (confirmed / total) if total > 0 else 0.0
+
+    items = []
+    for run in runs:
+        run_data = GroupingRunRead.model_validate(run)
+        run_data.confirmed_rate = rates.get(run.context.value)
+        items.append(run_data)
+
     return GroupingHistoryResponse(items=items, total=len(items))

@@ -353,7 +353,7 @@
         "Шаг 5: создать ручную группу с A и B — успешно, без блокировки"
       ],
       "dependencies": ["TASK-014"],
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": "TASK-016",

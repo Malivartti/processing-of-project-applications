@@ -1,10 +1,11 @@
+import itertools
 import uuid
 
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import Group, GroupContext, GroupSource, Project
+from app.models import Group, GroupContext, GroupSource, Project, RejectedPair
 
 
 class GroupFilters:
@@ -114,3 +115,26 @@ class GroupRepo:
         project.group_id = None
         await self.session.commit()
         return True
+
+    async def save_rejected_pairs_for_removal(
+        self, removed_project_id: uuid.UUID, group_project_ids: list[uuid.UUID]
+    ) -> None:
+        """Save rejected pairs: removed project vs all remaining projects in the group."""
+        pairs = [
+            RejectedPair(project_a_id=removed_project_id, project_b_id=other_id)
+            for other_id in group_project_ids
+            if other_id != removed_project_id
+        ]
+        if pairs:
+            self.session.add_all(pairs)
+            # no commit here — caller commits after remove_project
+
+    async def save_rejected_pairs_for_group(self, project_ids: list[uuid.UUID]) -> None:
+        """Save rejected pairs for all pairs within a group being deleted."""
+        pairs = [
+            RejectedPair(project_a_id=a, project_b_id=b)
+            for a, b in itertools.combinations(project_ids, 2)
+        ]
+        if pairs:
+            self.session.add_all(pairs)
+            # no commit here — caller commits after delete

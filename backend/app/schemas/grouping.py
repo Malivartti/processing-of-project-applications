@@ -24,6 +24,7 @@ class GroupingRunRead(BaseModel):
     groups_found: int | None = None
     projects_in_groups: int | None = None
     error_message: str | None = None
+    confirmed_rate: float | None = None
 
     model_config = {"from_attributes": True}
 

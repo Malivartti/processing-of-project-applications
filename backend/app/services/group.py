@@ -113,6 +113,13 @@ class GroupService:
         return self._to_read(group)
 
     async def delete_group(self, group_id: uuid.UUID) -> None:
+        group = await self.repo.get_by_id(group_id)
+        if group is None:
+            raise NotFoundError(detail=f"Group {group_id} not found")
+        # Save rejected pairs before deleting auto-group
+        if group.source == GroupSource.auto:
+            project_ids = [p.id for p in group.projects]
+            await self.repo.save_rejected_pairs_for_group(project_ids)
         deleted = await self.repo.delete(group_id)
         if not deleted:
             raise NotFoundError(detail=f"Group {group_id} not found")
@@ -156,6 +163,11 @@ class GroupService:
         group = await self.repo.get_by_id(group_id)
         if group is None:
             raise NotFoundError(detail=f"Group {group_id} not found")
+
+        # Save rejected pairs before removing from auto-group
+        if group.source == GroupSource.auto:
+            other_project_ids = [p.id for p in group.projects if p.id != project_id]
+            await self.repo.save_rejected_pairs_for_removal(project_id, other_project_ids)
 
         removed = await self.repo.remove_project(group_id, project_id)
         if not removed:

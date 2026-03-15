@@ -522,6 +522,35 @@
 
 ---
 
+## Итерация 22 — 2026-03-15
+**Фича:** TASK-015 — Отклонение рекомендаций: rejected_pairs и учёт при повторной группировке
+**Статус:** Завершено
+**Что сделано:**
+- backend/app/repositories/group.py: добавлены два новых метода GroupRepo:
+  - save_rejected_pairs_for_removal(removed_project_id, other_project_ids) — создаёт RejectedPair записи для removed vs all others
+  - save_rejected_pairs_for_group(project_ids) — создаёт RejectedPair для всех комбинаций C(n,2) при удалении группы
+- backend/app/services/group.py: обновлены delete_group и remove_project:
+  - delete_group: если source='auto' → сначала сохраняет все пары как rejected, затем удаляет группу
+  - remove_project: если source='auto' → сначала сохраняет пары removed vs remaining, затем убирает проект
+  - Для manual-групп rejected_pairs НЕ сохраняются (ручное объединение не блокируется)
+- backend/app/schemas/grouping.py: GroupingRunRead теперь имеет поле confirmed_rate: float | None
+- backend/app/api/grouping.py: GET /api/grouping/history теперь вычисляет confirmed_rate per context (confirmed auto-groups / total auto-groups) через агрегацию в БД
+- При кластеризации rejected_pairs уже учитывались (TASK-013 реализовывал apply_rejected_pairs) — нет изменений
+- tests/test_rejected_pairs.py: 7 новых тестов — service logic (4), repo methods (3)
+- ruff OK, pytest 104 passed
+**Следующие шаги:**
+- TASK-016: Сравнение двух проектов side-by-side API (depends on TASK-012 — done, high priority)
+- TASK-026: История группировки UI (depends on TASK-014, TASK-006 — done, medium)
+- TASK-027: Справочники UI (depends on TASK-007, TASK-006 — done, medium)
+- TASK-005: Nginx конфигурация (depends on TASK-001, TASK-002 — done)
+**Заметки для следующей итерации:**
+- rejected_pairs сохраняются до delete/remove_project вызова, в одном commit (save_rejected_pairs не делает commit — его делает remove_project/delete)
+- confirmed_rate вычисляется per context (main/selection), не глобально; возвращается для run.context
+- Для TASK-016: нужны GET /api/projects/compare?a={id}&b={id}, ключевые слова через pymorphy3, score из similarity_scores или on-the-fly
+- TASK-023 (Compare UI) разблокируется после TASK-016
+
+---
+
 ## Итерация 0 — Инициализация
 **Фича:** Настройка проекта
 **Статус:** Ожидает начала
