@@ -498,6 +498,30 @@
 
 ---
 
+## Итерация 21 — 2026-03-15
+**Фича:** TASK-024 — Фронтенд: вкладка 'Отбор на семестр'
+**Статус:** Завершено
+**Что сделано:**
+- backend/app/repositories/project.py: добавлен `is_selected: bool | None` в ProjectFilters с WHERE clause
+- backend/app/api/projects.py: добавлен `is_selected: bool | None = Query(None)` в list_projects endpoint
+- frontend/src/api/projects.ts: добавлен `is_selected` в ProjectFilters интерфейс + передаётся в getList; добавлен метод exportUrl(context, filters?) для генерации URL экспорта
+- frontend/src/stores/selection.ts: новый Pinia store useSelectionStore — state (items, total, loading, viewMode, groupModeItems, groupModeLoading, groups), actions (fetchProjects с is_selected=true, setFilters, resetFilters, setViewMode, fetchGroupsMode); viewMode сохраняется в localStorage
+- frontend/src/views/SelectionView.vue: полная реализация — список отобранных проектов с теми же фильтрами (ProjectFilters), счётчик (el-statistic), кнопка 'Убрать из отбора' у каждой строки, кнопка 'Проверить на схожесть' (GroupingRunDialog + GroupingProgressBar с context='selection'), кнопка 'Экспорт в Excel' (exportUrl('selected')), переключатель режимов Список/Группы (GroupsAccordion), el-empty если нет проектов
+- ruff OK, pytest 97 passed
+**Следующие шаги:**
+- TASK-026: История группировки UI (depends on TASK-014, TASK-006 — done)
+- TASK-027: Справочники UI (depends on TASK-007, TASK-006 — done)
+- TASK-015: Отклонение рекомендаций (depends on TASK-014 — done)
+- TASK-016: Сравнение двух проектов side-by-side API (depends on TASK-012 — done)
+**Заметки для следующей итерации:**
+- useSelectionStore — отдельный store, не зависит от useProjectsStore; fetchProjects передаёт is_selected=true
+- GroupsAccordion показывает context='selection' группы (fetchGroupsMode запрашивает groupsApi.getAll({context: 'selection'}))
+- selectionFilters — computed адаптер, совместимый с ProjectsFilters типом (добавляет has_group: null, group_source: null)
+- exportUrl('selected') открывается через window.open — работает без авторизации
+- TASK-030 теперь разблокирован (TASK-024 done, TASK-025 done)
+
+---
+
 ## Итерация 0 — Инициализация
 **Фича:** Настройка проекта
 **Статус:** Ожидает начала

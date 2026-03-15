@@ -18,6 +18,7 @@ class ProjectFilters:
         has_group: bool | None = None,
         group_source: GroupSource | None = None,
         search: str | None = None,
+        is_selected: bool | None = None,
     ) -> None:
         self.direction_id = direction_id
         self.priority_direction_id = priority_direction_id
@@ -26,6 +27,7 @@ class ProjectFilters:
         self.has_group = has_group
         self.group_source = group_source
         self.search = search
+        self.is_selected = is_selected
 
 
 class ProjectRepo:
@@ -50,6 +52,8 @@ class ProjectRepo:
                 q = q.where(Project.group_id.is_not(None))
             else:
                 q = q.where(Project.group_id.is_(None))
+        if filters.is_selected is not None:
+            q = q.where(Project.is_selected == filters.is_selected)
         if filters.search:
             q = q.where(
                 sa.text(

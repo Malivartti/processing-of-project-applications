@@ -36,6 +36,7 @@ export interface ProjectFilters {
   is_ongoing?: boolean
   has_group?: boolean
   group_source?: string
+  is_selected?: boolean
   limit?: number
   offset?: number
 }
@@ -82,6 +83,7 @@ export const projectsApi = {
     if (filters.is_ongoing !== undefined) params.is_ongoing = filters.is_ongoing
     if (filters.has_group !== undefined) params.has_group = filters.has_group
     if (filters.group_source) params.group_source = filters.group_source
+    if (filters.is_selected !== undefined) params.is_selected = filters.is_selected
 
     const { data } = await apiClient.get<ProjectListResponse>('/projects', { params })
     return data
@@ -103,5 +105,18 @@ export const projectsApi = {
   async getById(id: string): Promise<ProjectRead> {
     const { data } = await apiClient.get<ProjectRead>(`/projects/${id}`)
     return data
+  },
+
+  exportUrl(context: 'all' | 'filtered' | 'selected' | 'grouped', filters?: ProjectFilters): string {
+    const base = (apiClient.defaults.baseURL ?? '') + '/projects/export'
+    const params = new URLSearchParams({ context })
+    if (filters?.search) params.set('search', filters.search)
+    if (filters?.direction_id) params.set('direction_id', filters.direction_id)
+    if (filters?.priority_direction_id) params.set('priority_direction_id', filters.priority_direction_id)
+    if (filters?.trl_id) params.set('trl_id', filters.trl_id)
+    if (filters?.is_ongoing !== undefined) params.set('is_ongoing', String(filters.is_ongoing))
+    if (filters?.has_group !== undefined) params.set('has_group', String(filters.has_group))
+    if (filters?.group_source) params.set('group_source', filters.group_source)
+    return `${base}?${params.toString()}`
   },
 }

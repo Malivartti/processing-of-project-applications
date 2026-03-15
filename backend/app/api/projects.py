@@ -33,6 +33,7 @@ async def list_projects(
     has_group: bool | None = Query(None),
     group_source: GroupSource | None = Query(None),
     search: str | None = Query(None),
+    is_selected: bool | None = Query(None),
     db: AsyncSession = Depends(get_db),
 ) -> ProjectListResponse:
     filters = ProjectFilters(
@@ -43,6 +44,7 @@ async def list_projects(
         has_group=has_group,
         group_source=group_source,
         search=search,
+        is_selected=is_selected,
     )
     service = ProjectService(db)
     return await service.get_list(filters, limit=limit, offset=offset)
