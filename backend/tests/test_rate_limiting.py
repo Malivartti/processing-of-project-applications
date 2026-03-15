@@ -36,13 +36,13 @@ async def test_import_file_too_large():
 
 
 # ---------------------------------------------------------------------------
-# Rate limit on POST /api/grouping/run (1/30 seconds)
+# Rate limit on POST /api/grouping/run (1/10 seconds)
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
 async def test_grouping_run_rate_limit_returns_429():
-    """POST /api/grouping/run should return 429 when called twice within 30s."""
+    """POST /api/grouping/run should return 429 when called twice within 10s."""
     mock_db = AsyncMock()
 
     mock_redis = AsyncMock()

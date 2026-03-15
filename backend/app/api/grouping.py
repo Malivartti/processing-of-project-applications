@@ -31,7 +31,7 @@ async def _get_redis() -> aioredis.Redis:
 
 
 @router.post("/run", response_model=GroupingRunStartResponse, status_code=201)
-@limiter.limit("1/30 seconds")
+@limiter.limit("1/10 seconds")
 async def start_grouping(
     request: Request,
     body: GroupingRunStartRequest,
