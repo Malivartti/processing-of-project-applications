@@ -9,12 +9,16 @@ const client = axios.create({
 client.interceptors.response.use(
   (response) => response,
   (error) => {
-    const message =
-      error.response?.data?.detail ||
-      error.response?.data?.message ||
-      error.message ||
-      'Произошла ошибка'
-    ElMessage.error(String(message))
+    const detail = error.response?.data?.detail
+    let message: string
+    if (Array.isArray(detail)) {
+      message = detail.map((e: { msg?: string }) => e.msg || String(e)).join('; ')
+    } else if (detail && typeof detail === 'object') {
+      message = JSON.stringify(detail)
+    } else {
+      message = detail || error.response?.data?.message || error.message || 'Произошла ошибка'
+    }
+    ElMessage.error(message)
     return Promise.reject(error)
   }
 )

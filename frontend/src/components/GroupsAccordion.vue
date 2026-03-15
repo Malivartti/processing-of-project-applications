@@ -115,8 +115,14 @@
             v-for="project in group.projects"
             :key="project.id"
             class="project-row"
+            :class="{ 'project-row--checked': checkedIds.has(project.id) }"
             @click="$emit('project-click', project.id)"
           >
+            <el-checkbox
+              :model-value="checkedIds.has(project.id)"
+              @click.stop
+              @change="toggleCheck(project.id)"
+            />
             <span class="project-title">{{ project.title }}</span>
             <div class="project-tags">
               <el-tag v-if="project.direction_name" size="small" effect="plain" type="info">
@@ -148,8 +154,14 @@
             v-for="project in ungroupedProjects"
             :key="project.id"
             class="project-row"
+            :class="{ 'project-row--checked': checkedIds.has(project.id) }"
             @click="$emit('project-click', project.id)"
           >
+            <el-checkbox
+              :model-value="checkedIds.has(project.id)"
+              @click.stop
+              @change="toggleCheck(project.id)"
+            />
             <span class="project-title">{{ project.title }}</span>
             <div class="project-tags">
               <el-tag v-if="project.direction_name" size="small" effect="plain" type="info">
@@ -168,16 +180,31 @@
     </el-collapse>
 
     <el-empty v-if="!loading && groupedData.length === 0 && ungroupedProjects.length === 0" description="Нет данных" />
+
+    <!-- Floating compare panel -->
+    <transition name="float-panel">
+      <div v-if="checkedIds.size === 2" class="float-actions">
+        <span class="float-label">Выбрано: 2</span>
+        <el-button size="small" @click="openCompare">Сравнить</el-button>
+        <el-button size="small" @click="checkedIds.clear()">Сбросить</el-button>
+      </div>
+    </transition>
+
+    <ComparisonSideBySide
+      v-model="showCompare"
+      :project-ids="compareIds"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, markRaw } from 'vue'
+import { ref, computed, markRaw, reactive } from 'vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { Edit, Check, Delete } from '@element-plus/icons-vue'
 import type { ProjectListItem } from '../api/projects'
 import type { GroupListItem } from '../api/groups'
 import { groupsApi } from '../api/groups'
+import ComparisonSideBySide from './ComparisonSideBySide.vue'
 
 const EditIcon = markRaw(Edit)
 const CheckIcon = markRaw(Check)
@@ -196,6 +223,25 @@ const emit = defineEmits<{
 
 const openGroups = ref<string[]>([])
 const openUngrouped = ref<string[]>(['ungrouped'])
+
+// Compare selection
+const checkedIds = reactive(new Set<string>())
+const showCompare = ref(false)
+const compareIds = ref<[string, string] | null>(null)
+
+function toggleCheck(id: string) {
+  if (checkedIds.has(id)) {
+    checkedIds.delete(id)
+  } else {
+    checkedIds.add(id)
+  }
+}
+
+function openCompare() {
+  const [a, b] = Array.from(checkedIds)
+  compareIds.value = [a, b]
+  showCompare.value = true
+}
 
 // Edit state
 const editingGroupId = ref<string | null>(null)
@@ -439,6 +485,43 @@ const ungroupedProjects = computed(() =>
 
 .project-row:hover {
   background: #f5f7fa;
+}
+
+.project-row--checked {
+  background: #ecf5ff;
+}
+
+.float-actions {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #fff;
+  border: 1px solid #dcdfe6;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 100;
+}
+
+.float-label {
+  font-size: 14px;
+  color: #606266;
+  font-weight: 500;
+}
+
+.float-panel-enter-active,
+.float-panel-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.float-panel-enter-from,
+.float-panel-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(16px);
 }
 
 .project-title {

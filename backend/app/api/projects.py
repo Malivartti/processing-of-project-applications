@@ -26,7 +26,7 @@ router = APIRouter(tags=["projects"])
 
 @router.get("/api/projects", response_model=ProjectListResponse)
 async def list_projects(
-    limit: int = Query(20, ge=1, le=200),
+    limit: int = Query(20, ge=1, le=2000),
     offset: int = Query(0, ge=0),
     direction_id: uuid.UUID | None = Query(None),
     priority_direction_id: uuid.UUID | None = Query(None),
