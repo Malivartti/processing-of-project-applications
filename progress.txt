@@ -623,6 +623,31 @@
 
 ---
 
+## Итерация 26 — 2026-03-15
+**Фича:** TASK-028 — Rate limiting на API и базовая защита от злоупотреблений
+**Статус:** Завершено
+**Что сделано:**
+- backend/app/limiter.py: Limiter (slowapi, key_func=get_remote_address, default_limits=["200/minute"])
+- backend/app/main.py: app.state.limiter = limiter, SlowAPIMiddleware, кастомный _rate_limit_exceeded_handler → 429 JSON с Retry-After: 30
+- backend/app/api/grouping.py: @limiter.limit("1/30 seconds") + request: Request на start_grouping — 429 при втором запросе с того же IP в 30с
+- backend/app/api/projects.py: MAX_UPLOAD_SIZE = 50 MB; проверка len(file_bytes) > MAX_UPLOAD_SIZE → 413 HTTPException
+- nginx/nginx.conf: limit_req_zone (200r/m, zone=api:10m), limit_req_status 429, limit_req burst=20 nodelay в /api/ location; add_header Retry-After 30 always; client_max_body_size 50m
+- backend/tests/conftest.py: autouse fixture limiter._storage.reset() между тестами
+- backend/tests/test_rate_limiting.py: 4 теста (413 при >50MB, 429 при двойном вызове grouping/run, Retry-After в 429, limiter на app.state)
+- ruff OK, pytest 125 passed
+**Следующие шаги:**
+- TASK-026: История группировки UI (medium, depends on TASK-014, TASK-006 — done)
+- TASK-027: Справочники UI (medium, depends on TASK-007, TASK-006 — done)
+- TASK-029: Резервное копирование PostgreSQL (medium)
+- TASK-030: End-to-end тест (medium, depends on TASK-024, TASK-025 — done)
+**Заметки для следующей итерации:**
+- Redis lock (TASK-014) возвращает 409 при двойном запуске группировки; slowapi возвращает 429 при повторном запросе с того же IP в 30с
+- conftest.py: limiter._storage.reset() нужен чтобы тесты не влияли друг на друга через in-memory rate limit storage
+- Кастомный handler нужен вместо slowapi._rate_limit_exceeded_handler, т.к. headers_enabled=True ломает endpoints с Pydantic-моделями (не starlette.Response)
+- nginx limit_req_status 429 + add_header Retry-After 30 always в location /api/
+
+---
+
 ## Итерация 0 — Инициализация
 **Фича:** Настройка проекта
 **Статус:** Ожидает начала

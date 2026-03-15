@@ -4,12 +4,13 @@ import uuid
 
 import redis.asyncio as aioredis
 import sqlalchemy as sa
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.database import get_db
 from app.exceptions import ConflictError, NotFoundError
+from app.limiter import limiter
 from app.models import GroupContext, GroupingRun, RunStatus
 from app.schemas.grouping import (
     GroupingHistoryResponse,
@@ -30,7 +31,9 @@ async def _get_redis() -> aioredis.Redis:
 
 
 @router.post("/run", response_model=GroupingRunStartResponse, status_code=201)
+@limiter.limit("1/30 seconds")
 async def start_grouping(
+    request: Request,
     body: GroupingRunStartRequest,
     db: AsyncSession = Depends(get_db),
 ) -> GroupingRunStartResponse:

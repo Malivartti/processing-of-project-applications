@@ -634,7 +634,7 @@
         "Шаг 3: попытка загрузить файл >50 MB — 413 Request Entity Too Large"
       ],
       "dependencies": ["TASK-014", "TASK-005"],
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": "TASK-029",

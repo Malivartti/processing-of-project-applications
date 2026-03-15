@@ -98,13 +98,20 @@ async def download_template() -> Response:
     )
 
 
+MAX_UPLOAD_SIZE = 50 * 1024 * 1024  # 50 MB
+
+
 @router.post("/api/projects/import", response_model=ImportPreviewResponse)
 async def import_projects(
     file: UploadFile = File(...),
     confirm: bool = Query(False),
     db: AsyncSession = Depends(get_db),
 ) -> ImportPreviewResponse:
+    from fastapi import HTTPException
+
     file_bytes = await file.read()
+    if len(file_bytes) > MAX_UPLOAD_SIZE:
+        raise HTTPException(status_code=413, detail="File too large. Maximum size is 50 MB")
     service = ExcelImportService(db)
     valid_rows, preview = await service.parse_and_validate(file_bytes)
     if confirm:
