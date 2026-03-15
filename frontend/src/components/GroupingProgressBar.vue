@@ -30,6 +30,7 @@ const emit = defineEmits<{
 }>()
 
 const STAGE_LABELS: Record<string, string> = {
+  pending: 'Запуск...',
   embeddings: 'Вычисление эмбеддингов',
   similarity: 'Расчёт схожести',
   clustering: 'Кластеризация',
@@ -58,10 +59,13 @@ const progressStatus = computed(() => {
 })
 
 let intervalId: ReturnType<typeof setInterval> | null = null
+let consecutiveErrors = 0
+const MAX_CONSECUTIVE_ERRORS = 3
 
 async function poll() {
   try {
     const res = await groupingApi.getGroupingStatus(props.runId)
+    consecutiveErrors = 0
     stage.value = res.stage
     current.value = res.current
     total.value = res.total
@@ -75,9 +79,11 @@ async function poll() {
       emit('error', res.error ?? 'Ошибка группировки')
     }
   } catch {
-    // axios interceptor shows error toast; stop polling to avoid spam
-    stopPolling()
-    emit('error', 'Ошибка при получении статуса группировки')
+    consecutiveErrors++
+    if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+      stopPolling()
+      emit('error', 'Ошибка при получении статуса группировки')
+    }
   }
 }
 
@@ -102,6 +108,7 @@ watch(
       current.value = 0
       total.value = 0
       status.value = ''
+      consecutiveErrors = 0
       startPolling()
     }
   },

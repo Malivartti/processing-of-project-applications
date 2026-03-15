@@ -69,6 +69,14 @@ async def start_grouping(
         # Set Redis lock
         await r.set(lock_key, str(run_id), ex=LOCK_TTL)
 
+        # Write initial progress so status polling doesn't get 404 before the task starts
+        progress_key = f"grouping:progress:{run_id}"
+        await r.hset(
+            progress_key,
+            mapping={"stage": "pending", "current": "0", "total": "0", "status": "pending"},
+        )
+        await r.expire(progress_key, LOCK_TTL)
+
         # Launch Celery task
         run_grouping_task.delay(str(run_id), body.threshold, body.context)
 
