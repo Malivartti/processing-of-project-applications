@@ -648,6 +648,24 @@
 
 ---
 
+## Итерация 27 — 2026-03-15
+**Фича:** TASK-026 — Фронтенд: вкладка 'История' — лог запусков авто-группировки
+**Статус:** Завершено
+**Что сделано:**
+- frontend/src/api/grouping.ts: добавлены типы GroupingRunRead и GroupingHistoryResponse; getGroupingHistory() теперь типизирован
+- frontend/src/views/HistoryView.vue: полная реализация — el-table с колонками (Дата и время, Контекст, Порог, Обработано, Групп найдено, В группах, Подтверждено, Статус); кнопка Обновить; statusType/statusLabel хелперы; форматирование даты через toLocaleString('ru-RU'); el-tooltip для error_message при ошибке; onMounted загружает данные
+- ruff OK, pytest 125 passed
+**Следующие шаги:**
+- TASK-027: Справочники UI (depends on TASK-007, TASK-006 — done, medium)
+- TASK-029: Резервное копирование PostgreSQL (medium)
+- TASK-030: End-to-end тест (medium, depends on TASK-024, TASK-025 — done)
+**Заметки для следующей итерации:**
+- HistoryView загружает данные в onMounted, сортировка новые-сверху обеспечивается backend (ORDER BY started_at DESC)
+- confirmed_rate приходит как float 0..1, отображается как % через (rate * 100).toFixed(0)
+- TASK-027 DictionariesView — три секции (Направления, Приоритетные направления, УГТ) с inline-редактированием; API already done (TASK-007)
+
+---
+
 ## Итерация 0 — Инициализация
 **Фича:** Настройка проекта
 **Статус:** Ожидает начала

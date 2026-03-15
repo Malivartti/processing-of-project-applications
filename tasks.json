@@ -593,7 +593,7 @@
         "Шаг 3: поле confirmed_rate показывает процент подтверждённых групп"
       ],
       "dependencies": ["TASK-014", "TASK-006"],
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": "TASK-027",
