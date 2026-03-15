@@ -232,10 +232,13 @@ class ExcelImportService:
     async def do_import(self, valid_rows: list[ParsedRow]) -> int:
         projects = [
             Project(
-                title=row.title,
-                problem=row.problem,
-                goal=row.goal,
-                expected_result=row.expected_result,
+                title=row.title[:80],
+                problem=row.problem or "",
+                goal=row.goal or "",
+                expected_result=row.expected_result or "",
+                relevance="",
+                key_tasks="",
+                implementation_period="",
                 is_ongoing=row.is_ongoing,
                 direction_id=row.direction_id,
                 priority_direction_id=row.priority_direction_id,

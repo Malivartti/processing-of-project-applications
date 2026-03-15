@@ -118,8 +118,8 @@ class Project(Base):
 
     # --- Обязательные поля формы ---
     title: Mapped[str] = mapped_column(String(80), nullable=False)
-    direction_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("directions.id", ondelete="RESTRICT"), nullable=False
+    direction_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("directions.id", ondelete="SET NULL"), nullable=True
     )
     is_ongoing: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     # Принадлежность к приоритетному направлению (необязательное)
@@ -134,8 +134,8 @@ class Project(Base):
     goal: Mapped[str] = mapped_column(Text, nullable=False)
     key_tasks: Mapped[str] = mapped_column(Text, nullable=False)
     expected_result: Mapped[str] = mapped_column(Text, nullable=False)
-    trl_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("trl_levels.id", ondelete="RESTRICT"), nullable=False
+    trl_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("trl_levels.id", ondelete="SET NULL"), nullable=True
     )
     budget: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
 
@@ -177,11 +177,11 @@ class Project(Base):
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
     )
 
-    direction: Mapped[Direction] = relationship("Direction", back_populates="projects")
+    direction: Mapped[Direction | None] = relationship("Direction", back_populates="projects")
     priority_direction: Mapped[PriorityDirection | None] = relationship(
         "PriorityDirection", back_populates="projects"
     )
-    trl_level: Mapped[TRLLevel] = relationship("TRLLevel", back_populates="projects")
+    trl_level: Mapped[TRLLevel | None] = relationship("TRLLevel", back_populates="projects")
     group: Mapped[Group | None] = relationship("Group", back_populates="projects")
 
     __table_args__ = (

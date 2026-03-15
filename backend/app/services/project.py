@@ -32,7 +32,7 @@ class ProjectService:
             is_auto_checked=project.is_auto_checked,
             source=project.source,
             direction_id=project.direction_id,
-            direction_name=project.direction.name,
+            direction_name=project.direction.name if project.direction else None,
             priority_direction_id=project.priority_direction_id,
             trl_id=project.trl_id,
             participants_count=project.participants_count,
@@ -58,10 +58,20 @@ class ProjectService:
                 id=project.priority_direction.id,
                 name=project.priority_direction.name,
             )
+        direction_info = None
+        if project.direction:
+            direction_info = DirectionInfo(id=project.direction.id, name=project.direction.name)
+        trl_info = None
+        if project.trl_level:
+            trl_info = TRLLevelInfo(
+                id=project.trl_level.id,
+                name=project.trl_level.name,
+                level=project.trl_level.level,
+            )
         return ProjectRead(
             id=project.id,
             title=project.title,
-            direction=DirectionInfo(id=project.direction.id, name=project.direction.name),
+            direction=direction_info,
             is_ongoing=project.is_ongoing,
             priority_direction=priority_direction_info,
             implementation_period=project.implementation_period,
@@ -70,11 +80,7 @@ class ProjectService:
             goal=project.goal,
             key_tasks=project.key_tasks,
             expected_result=project.expected_result,
-            trl_level=TRLLevelInfo(
-                id=project.trl_level.id,
-                name=project.trl_level.name,
-                level=project.trl_level.level,
-            ),
+            trl_level=trl_info,
             budget=project.budget,
             support_master_classes=project.support_master_classes,
             support_consultations=project.support_consultations,

@@ -45,10 +45,10 @@ class ProjectListItem(BaseModel):
     is_selected: bool
     is_auto_checked: bool
     source: ProjectSource
-    direction_id: uuid.UUID
-    direction_name: str
+    direction_id: uuid.UUID | None
+    direction_name: str | None
     priority_direction_id: uuid.UUID | None
-    trl_id: uuid.UUID
+    trl_id: uuid.UUID | None
     participants_count: int
     group_id: uuid.UUID | None
     group_name: str | None
@@ -61,7 +61,7 @@ class ProjectListItem(BaseModel):
 class ProjectRead(BaseModel):
     id: uuid.UUID
     title: str
-    direction: DirectionInfo
+    direction: DirectionInfo | None
     is_ongoing: bool
     priority_direction: PriorityDirectionInfo | None
     implementation_period: str
@@ -70,7 +70,7 @@ class ProjectRead(BaseModel):
     goal: str
     key_tasks: str
     expected_result: str
-    trl_level: TRLLevelInfo
+    trl_level: TRLLevelInfo | None
     budget: int
     support_master_classes: bool
     support_consultations: bool
