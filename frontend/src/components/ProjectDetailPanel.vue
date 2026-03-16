@@ -41,15 +41,21 @@
       <div class="text-section">
         <div v-if="project.problem" class="text-field">
           <div class="field-label">Проблема</div>
-          <div class="field-value">{{ project.problem }}</div>
+          <div class="field-value">
+            <HighlightedText :text="project.problem" :keywords="props.searchKeywords ?? []" />
+          </div>
         </div>
         <div v-if="project.goal" class="text-field">
           <div class="field-label">Цель</div>
-          <div class="field-value">{{ project.goal }}</div>
+          <div class="field-value">
+            <HighlightedText :text="project.goal" :keywords="props.searchKeywords ?? []" />
+          </div>
         </div>
         <div v-if="project.expected_result" class="text-field">
           <div class="field-label">Ожидаемый результат</div>
-          <div class="field-value">{{ project.expected_result }}</div>
+          <div class="field-value">
+            <HighlightedText :text="project.expected_result" :keywords="props.searchKeywords ?? []" />
+          </div>
         </div>
       </div>
 
@@ -120,9 +126,11 @@ import { ref, watch, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { projectsApi, type ProjectRead, type GroupInfo } from '../api/projects'
 import { groupsApi, type GroupRead } from '../api/groups'
+import HighlightedText from './HighlightedText.vue'
 
 const props = defineProps<{
   projectId: string | null
+  searchKeywords?: string[]
 }>()
 
 const emit = defineEmits<{

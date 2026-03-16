@@ -2,6 +2,7 @@
   <div class="projects-view">
     <ProjectDetailPanel
       :project-id="selectedProjectId"
+      :search-keywords="searchKeywords"
       @close="selectedProjectId = null"
       @updated="onPanelUpdated"
     />
@@ -42,9 +43,11 @@
 
     <el-divider />
 
-    <!-- Filters + view mode toggle -->
+    <!-- Filters -->
+    <ProjectFilters :initial-filters="store.filters" @change="onFiltersChange" @reset="onFiltersReset" />
+
+    <!-- Actions toolbar -->
     <div class="toolbar">
-      <ProjectFilters :initial-filters="store.filters" @change="onFiltersChange" @reset="onFiltersReset" />
       <div class="toolbar-right">
         <GroupingProgressBar
           v-if="activeRunId"
@@ -178,7 +181,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { TableInstance } from 'element-plus'
@@ -398,6 +401,9 @@ function onSizeChange(size: number) {
 }
 
 const selectedProjectId = ref<string | null>(null)
+const searchKeywords = computed(() =>
+  store.filters.search?.split(/\s+/).filter(Boolean) ?? []
+)
 
 function onRowClick(row: { id: string }) {
   selectedProjectId.value = row.id
@@ -457,16 +463,14 @@ watch(
 
 .toolbar {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
+  justify-content: flex-end;
+  margin-bottom: 4px;
 }
 
 .toolbar-right {
   display: flex;
   align-items: center;
-  gap: 12px;
-  flex-shrink: 0;
+  gap: 8px;
 }
 
 .view-toggle {

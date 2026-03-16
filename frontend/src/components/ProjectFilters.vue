@@ -1,109 +1,98 @@
 <template>
   <div class="project-filters">
-    <el-row :gutter="12" align="middle">
-      <el-col :span="6">
-        <el-input
-          v-model="searchInput"
-          placeholder="Поиск по названию..."
-          clearable
-          prefix-icon="Search"
-          @input="onSearchInput"
-          @clear="onSearchClear"
+    <div class="filters-row">
+      <el-input
+        v-model="searchInput"
+        class="filter-search"
+        placeholder="Поиск по названию..."
+        clearable
+        prefix-icon="Search"
+        @input="onSearchInput"
+        @clear="onSearchClear"
+      />
+
+      <el-select
+        v-model="localFilters.direction_id"
+        class="filter-item"
+        placeholder="Направление"
+        clearable
+        @change="onFilterChange"
+      >
+        <el-option
+          v-for="item in directions"
+          :key="item.id"
+          :label="item.name"
+          :value="item.id"
         />
-      </el-col>
+      </el-select>
 
-      <el-col :span="4">
-        <el-select
-          v-model="localFilters.direction_id"
-          placeholder="Направление"
-          clearable
-          @change="onFilterChange"
-        >
-          <el-option
-            v-for="item in directions"
-            :key="item.id"
-            :label="item.name"
-            :value="item.id"
-          />
-        </el-select>
-      </el-col>
+      <el-select
+        v-model="localFilters.priority_direction_id"
+        class="filter-item filter-item--wide"
+        placeholder="Приоритетное направление"
+        clearable
+        @change="onFilterChange"
+      >
+        <el-option
+          v-for="item in priorityDirections"
+          :key="item.id"
+          :label="item.name"
+          :value="item.id"
+        />
+      </el-select>
 
-      <el-col :span="4">
-        <el-select
-          v-model="localFilters.priority_direction_id"
-          placeholder="Приоритетное направление"
-          clearable
-          @change="onFilterChange"
-        >
-          <el-option
-            v-for="item in priorityDirections"
-            :key="item.id"
-            :label="item.name"
-            :value="item.id"
-          />
-        </el-select>
-      </el-col>
+      <el-select
+        v-model="localFilters.trl_id"
+        class="filter-item filter-item--narrow"
+        placeholder="УГТ"
+        clearable
+        @change="onFilterChange"
+      >
+        <el-option
+          v-for="item in trlLevels"
+          :key="item.id"
+          :label="item.name"
+          :value="item.id"
+        />
+      </el-select>
 
-      <el-col :span="3">
-        <el-select
-          v-model="localFilters.trl_id"
-          placeholder="УГТ"
-          clearable
-          @change="onFilterChange"
-        >
-          <el-option
-            v-for="item in trlLevels"
-            :key="item.id"
-            :label="item.name"
-            :value="item.id"
-          />
-        </el-select>
-      </el-col>
+      <el-select
+        v-model="isOngoingValue"
+        class="filter-item filter-item--narrow"
+        placeholder="Срок"
+        clearable
+        @change="onIsOngoingChange"
+      >
+        <el-option label="Бессрочный" value="true" />
+        <el-option label="Срочный" value="false" />
+      </el-select>
 
-      <el-col :span="3">
-        <el-select
-          v-model="isOngoingValue"
-          placeholder="Срок"
-          clearable
-          @change="onIsOngoingChange"
-        >
-          <el-option label="Бессрочный" value="true" />
-          <el-option label="Срочный" value="false" />
-        </el-select>
-      </el-col>
+      <el-select
+        v-model="hasGroupValue"
+        class="filter-item filter-item--narrow"
+        placeholder="Группа"
+        clearable
+        @change="onHasGroupChange"
+      >
+        <el-option label="В группе" value="true" />
+        <el-option label="Без группы" value="false" />
+      </el-select>
 
-      <el-col :span="3">
-        <el-select
-          v-model="hasGroupValue"
-          placeholder="Группа"
-          clearable
-          @change="onHasGroupChange"
-        >
-          <el-option label="В группе" value="true" />
-          <el-option label="Без группы" value="false" />
-        </el-select>
-      </el-col>
+      <el-select
+        v-model="localFilters.group_source"
+        class="filter-item filter-item--narrow"
+        placeholder="Тип группы"
+        clearable
+        @change="onFilterChange"
+      >
+        <el-option label="Авто" value="auto" />
+        <el-option label="Ручная" value="manual" />
+      </el-select>
 
-      <el-col :span="3">
-        <el-select
-          v-model="localFilters.group_source"
-          placeholder="Тип группы"
-          clearable
-          @change="onFilterChange"
-        >
-          <el-option label="Авто" value="auto" />
-          <el-option label="Ручная" value="manual" />
-        </el-select>
-      </el-col>
-    </el-row>
-
-    <el-row v-if="hasActiveFilters" :gutter="12" style="margin-top: 8px">
-      <el-col :span="24">
-        <el-button size="small" type="info" plain @click="onReset">
-          Сбросить фильтры
-        </el-button>
-      </el-col>
-    </el-row>
+      <el-button v-if="hasActiveFilters" size="small" type="info" plain @click="onReset">
+        Сбросить
+      </el-button>
+    </div>
   </div>
 </template>
 
@@ -212,7 +201,30 @@ onMounted(async () => {
   padding: 12px 0;
 }
 
-.el-select {
-  width: 100%;
+.filters-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.filter-search {
+  flex: 2 1 200px;
+  min-width: 180px;
+}
+
+.filter-item {
+  flex: 1 1 150px;
+  min-width: 140px;
+}
+
+.filter-item--wide {
+  flex: 1.5 1 180px;
+  min-width: 160px;
+}
+
+.filter-item--narrow {
+  flex: 1 1 120px;
+  min-width: 110px;
 }
 </style>

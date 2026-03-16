@@ -2,6 +2,7 @@
   <div class="selection-view">
     <ProjectDetailPanel
       :project-id="selectedProjectId"
+      :search-keywords="searchKeywords"
       @close="selectedProjectId = null"
       @updated="onPanelUpdated"
     />
@@ -152,6 +153,10 @@ import GroupingRunDialog from '../components/GroupingRunDialog.vue'
 import GroupingProgressBar from '../components/GroupingProgressBar.vue'
 
 const store = useSelectionStore()
+
+const searchKeywords = computed(() =>
+  store.filters.search?.split(/\s+/).filter(Boolean) ?? []
+)
 
 const currentPage = ref(store.filters.page)
 const pageSize = ref(store.filters.limit)
