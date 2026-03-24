@@ -68,12 +68,7 @@
             <template v-if="editingId === row.id">
               <el-input v-model="editName" size="small" style="width: 200px" />
             </template>
-            <span v-else :class="{ 'text-inactive': !row.is_active }">
-              {{ row.name }}
-              <el-icon v-if="!row.is_active" class="icon-inactive" title="Неактивно">
-                <component :is="RemoveFilled" />
-              </el-icon>
-            </span>
+            <span v-else>{{ row.name }}</span>
           </template>
         </el-table-column>
 
@@ -82,41 +77,33 @@
             <template v-if="editingId === row.id">
               <el-input-number v-model="editLevel" :min="1" :max="9" size="small" style="width: 90px" />
             </template>
-            <span v-else :class="{ 'text-inactive': !row.is_active }">{{ row.level ?? '—' }}</span>
+            <span v-else>{{ row.level ?? '—' }}</span>
           </template>
         </el-table-column>
 
-        <el-table-column label="Статус" width="120">
+        <el-table-column label="Действия" width="120" align="right">
           <template #default="{ row }">
-            <el-tag :type="row.is_active ? 'success' : 'info'" size="small">
-              {{ row.is_active ? 'Активно' : 'Неактивно' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-
-        <el-table-column label="Действия" width="160" align="right">
-          <template #default="{ row }">
-            <template v-if="editingId === row.id">
-              <el-button size="small" type="primary" :loading="saving" @click="saveEdit(row)">Сохранить</el-button>
-              <el-button size="small" @click="cancelEdit">Отмена</el-button>
-            </template>
-            <template v-else>
-              <el-button
-                v-if="row.is_active"
-                size="small"
-                :icon="Edit"
-                @click="startEdit(row)"
-                title="Редактировать"
-              />
-              <el-button
-                v-if="row.is_active"
-                size="small"
-                type="danger"
-                :icon="Delete"
-                @click="handleDeactivate(row)"
-                title="Деактивировать"
-              />
-            </template>
+            <div class="table-actions">
+              <template v-if="editingId === row.id">
+                <el-button size="small" type="primary" :icon="Check" :loading="saving" @click="saveEdit(row)" title="Сохранить" />
+                <el-button size="small" :icon="Close" @click="cancelEdit" title="Отмена" />
+              </template>
+              <template v-else>
+                <el-button
+                  size="small"
+                  :icon="Edit"
+                  @click="startEdit(row)"
+                  title="Редактировать"
+                />
+                <el-button
+                  size="small"
+                  type="danger"
+                  :icon="Delete"
+                  @click="handleDelete(row)"
+                  title="Удалить"
+                />
+              </template>
+            </div>
           </template>
         </el-table-column>
       </el-table>
@@ -232,16 +219,15 @@ async function toggleActive(row: DictionaryItem) {
   emit('change')
 }
 
-async function handleDeactivate(row: DictionaryItem) {
+async function handleDelete(row: DictionaryItem) {
   await ElMessageBox.confirm(
-    `Деактивировать "${row.name}"? Значение перестанет отображаться в фильтрах.`,
-    'Деактивация',
-    { confirmButtonText: 'Деактивировать', cancelButtonText: 'Отмена', type: 'warning' },
+    `Удалить "${row.name}"? Это действие нельзя отменить.`,
+    'Удаление',
+    { confirmButtonText: 'Удалить', cancelButtonText: 'Отмена', type: 'warning' },
   )
   await dictionariesApi.deactivate(props.type, row.id)
-  const idx = items.value.findIndex((i) => i.id === row.id)
-  if (idx !== -1) items.value[idx] = { ...items.value[idx], is_active: false }
-  ElMessage.success('Значение деактивировано')
+  items.value = items.value.filter((i) => i.id !== row.id)
+  ElMessage.success('Значение удалено')
   emit('change')
 }
 
@@ -280,14 +266,11 @@ async function handleAdd() {
   padding: 8px 0;
 }
 
-.text-inactive {
-  color: #9ca3af;
-}
-
-.icon-inactive {
-  margin-left: 4px;
-  vertical-align: middle;
-  color: #9ca3af;
+.table-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
 }
 
 .tags-list {

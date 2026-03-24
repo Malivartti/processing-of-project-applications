@@ -34,8 +34,7 @@ class DictionaryService:
             raise NotFoundError(detail=f"Item {item_id} not found")
         return item
 
-    async def deactivate(self, item_id: UUID) -> object:
-        item = await self.repo.deactivate(item_id)
-        if item is None:
+    async def delete(self, item_id: UUID) -> None:
+        found = await self.repo.delete(item_id)
+        if not found:
             raise NotFoundError(detail=f"Item {item_id} not found")
-        return item

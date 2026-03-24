@@ -60,11 +60,11 @@ async def update(
 
 
 @router.delete("/{dict_type}/{item_id}", status_code=204)
-async def deactivate(
+async def delete(
     dict_type: str,
     item_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ) -> None:
     model = resolve_model(dict_type)
     service = DictionaryService(db, model)
-    await service.deactivate(item_id)
+    await service.delete(item_id)

@@ -50,11 +50,10 @@ class DictionaryRepo(Generic[T]):
         await self.session.refresh(item)
         return item
 
-    async def deactivate(self, item_id: UUID) -> T | None:
+    async def delete(self, item_id: UUID) -> bool:
         item = await self.get_by_id(item_id)
         if item is None:
-            return None
-        item.is_active = False
+            return False
+        await self.session.delete(item)
         await self.session.commit()
-        await self.session.refresh(item)
-        return item
+        return True
