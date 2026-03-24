@@ -4,57 +4,77 @@
     direction="rtl"
     size="480px"
     :before-close="handleClose"
+    @opened="drawerOpened = true"
+    @closed="drawerOpened = false"
   >
     <template #header>
-      <span class="drawer-title">{{ project?.title || 'Загрузка...' }}</span>
+      <span class="drawer-title">{{ project?.title || "Загрузка..." }}</span>
     </template>
 
-    <div v-if="loading" class="loading-wrapper">
+    <div v-if="loading || !drawerOpened" class="loading-wrapper">
       <el-skeleton :rows="8" animated />
     </div>
 
     <div v-else-if="project" class="project-detail">
       <!-- Status tags -->
       <div class="status-tags">
-        <el-tag :type="project.is_ongoing ? 'info' : 'success'" size="small">
-          {{ project.is_ongoing ? 'Бессрочный' : 'Срочный' }}
-        </el-tag>
-        <el-tag v-if="project.is_selected" type="warning" size="small">В отборе</el-tag>
-        <el-tag v-else-if="project.is_auto_checked" type="success" size="small">Проверен</el-tag>
+        <el-tag v-if="project.is_selected" type="warning" size="small"
+          >В отборе</el-tag
+        >
+        <el-tag v-else-if="project.is_auto_checked" type="success" size="small"
+          >Проверен</el-tag
+        >
         <el-tag v-else type="info" size="small">Новый</el-tag>
       </div>
 
-      <!-- Dictionary fields -->
+      <!-- Meta fields -->
       <el-descriptions :column="1" border size="small" class="project-fields">
         <el-descriptions-item label="Направление">
-          {{ project.direction_name || '—' }}
+          {{ project.direction?.name || "—" }}
         </el-descriptions-item>
-        <el-descriptions-item label="Приор. направление">
-          {{ project.priority_direction_name || '—' }}
+        <el-descriptions-item label="Реализуется">
+          {{ project.is_ongoing ? "Да" : "Нет" }}
         </el-descriptions-item>
-        <el-descriptions-item label="УГТ">
-          {{ project.trl_name || '—' }}
+        <el-descriptions-item label="Срок реализации">
+          {{
+            project.implementation_period
+              ? `${project.implementation_period} сем.`
+              : "—"
+          }}
+        </el-descriptions-item>
+        <el-descriptions-item>
+          <template #label>
+            <el-tooltip
+              content="Уровень готовности технологий"
+              placement="top"
+              effect="dark"
+            >
+              <span class="label-with-tip">
+                УГТ
+                <el-icon class="tip-icon"><QuestionFilled /></el-icon>
+              </span>
+            </el-tooltip>
+          </template>
+          {{
+            project.trl_level
+              ? `${project.trl_level.level} (${project.trl_level.name.split("—")[1]?.trim() ?? project.trl_level.name})`
+              : "—"
+          }}
         </el-descriptions-item>
       </el-descriptions>
 
       <!-- Text fields -->
       <div class="text-section">
-        <div v-if="project.problem" class="text-field">
-          <div class="field-label">Проблема</div>
-          <div class="field-value">
-            <HighlightedText :text="project.problem" :keywords="props.searchKeywords ?? []" />
-          </div>
-        </div>
-        <div v-if="project.goal" class="text-field">
-          <div class="field-label">Цель</div>
-          <div class="field-value">
-            <HighlightedText :text="project.goal" :keywords="props.searchKeywords ?? []" />
-          </div>
-        </div>
-        <div v-if="project.expected_result" class="text-field">
-          <div class="field-label">Ожидаемый результат</div>
-          <div class="field-value">
-            <HighlightedText :text="project.expected_result" :keywords="props.searchKeywords ?? []" />
+        <div v-for="field in textFields" :key="field.label" class="text-field">
+          <div class="field-label">{{ field.label }}</div>
+          <div class="field-value" :class="{ 'field-empty': !field.value }">
+            <template v-if="field.value">
+              <HighlightedText
+                :text="field.value"
+                :keywords="props.searchKeywords ?? []"
+              />
+            </template>
+            <template v-else>—</template>
           </div>
         </div>
       </div>
@@ -64,13 +84,21 @@
         <div class="section-title">Группа</div>
         <div class="group-info">
           <div class="group-header">
-            <el-tag :style="groupTagStyle(project.group)" size="default" effect="plain">
+            <el-tag
+              :style="groupTagStyle(project.group)"
+              size="default"
+              effect="plain"
+            >
               {{ project.group.name }}
             </el-tag>
             <el-tag size="small" type="info">
-              {{ project.group.source === 'auto' ? 'Авто' : 'Ручная' }}
+              {{ project.group.source === "auto" ? "Авто" : "Ручная" }}
             </el-tag>
-            <el-tag v-if="project.group.is_confirmed" size="small" type="success">
+            <el-tag
+              v-if="project.group.is_confirmed"
+              size="small"
+              type="success"
+            >
               Подтверждена
             </el-tag>
           </div>
@@ -122,108 +150,122 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
-import { ElMessage } from 'element-plus'
-import { projectsApi, type ProjectRead, type GroupInfo } from '../api/projects'
-import { groupsApi, type GroupRead } from '../api/groups'
-import HighlightedText from './HighlightedText.vue'
+import { ref, watch, computed } from "vue";
+import { ElMessage } from "element-plus";
+import { QuestionFilled } from "@element-plus/icons-vue";
+import { projectsApi, type ProjectRead, type GroupInfo } from "../api/projects";
+import { groupsApi, type GroupRead } from "../api/groups";
+import HighlightedText from "./HighlightedText.vue";
 
 const props = defineProps<{
-  projectId: string | null
-  searchKeywords?: string[]
-}>()
+  projectId: string | null;
+  searchKeywords?: string[];
+}>();
 
 const emit = defineEmits<{
-  close: []
-  updated: []
-}>()
+  close: [];
+  updated: [];
+}>();
 
-const visible = ref(false)
-const loading = ref(false)
-const actionLoading = ref(false)
-const project = ref<ProjectRead | null>(null)
-const groupDetail = ref<GroupRead | null>(null)
+const visible = ref(false);
+const drawerOpened = ref(false);
+const loading = ref(false);
+const actionLoading = ref(false);
+const project = ref<ProjectRead | null>(null);
+const groupDetail = ref<GroupRead | null>(null);
+
+const textFields = computed(() => {
+  if (!project.value) return [];
+  return [
+    { label: "Актуальность", value: project.value.relevance },
+    { label: "Проблема", value: project.value.problem },
+    { label: "Цель", value: project.value.goal },
+    { label: "Ключевые задачи", value: project.value.key_tasks },
+    { label: "Ожидаемый результат", value: project.value.expected_result },
+  ];
+});
 
 const groupProjects = computed(() => {
-  if (!groupDetail.value || !project.value) return []
-  return groupDetail.value.projects.filter((p) => p.id !== project.value!.id)
-})
+  if (!groupDetail.value || !project.value) return [];
+  return groupDetail.value.projects.filter((p) => p.id !== project.value!.id);
+});
 
 watch(
   () => props.projectId,
   async (id) => {
     if (id) {
-      visible.value = true
-      await loadProject(id)
+      visible.value = true;
+      await loadProject(id);
     } else {
-      visible.value = false
+      visible.value = false;
     }
   },
-)
+);
 
 async function loadProject(id: string) {
-  loading.value = true
-  project.value = null
-  groupDetail.value = null
+  loading.value = true;
+  project.value = null;
+  groupDetail.value = null;
   try {
-    project.value = await projectsApi.getById(id)
+    project.value = await projectsApi.getById(id);
     if (project.value.group) {
-      groupDetail.value = await groupsApi.getById(project.value.group.id)
+      groupDetail.value = await groupsApi.getById(project.value.group.id);
     }
   } catch {
-    ElMessage.error('Не удалось загрузить проект')
+    ElMessage.error("Не удалось загрузить проект");
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
 function handleClose(done: () => void) {
-  emit('close')
-  done()
+  emit("close");
+  done();
 }
 
 function groupTagStyle(group: GroupInfo) {
   return {
-    border: group.source === 'auto' ? '1px dashed #909399' : '1px solid #909399',
-    color: '#606266',
-  }
+    border:
+      group.source === "auto" ? "1px dashed #909399" : "1px solid #909399",
+    color: "#606266",
+  };
 }
 
 async function addToSelection() {
-  if (!project.value) return
-  actionLoading.value = true
+  if (!project.value) return;
+  actionLoading.value = true;
   try {
-    await projectsApi.select(project.value.id)
-    project.value.is_selected = true
-    emit('updated')
+    await projectsApi.select(project.value.id);
+    project.value.is_selected = true;
+    emit("updated");
   } finally {
-    actionLoading.value = false
+    actionLoading.value = false;
   }
 }
 
 async function removeFromSelection() {
-  if (!project.value) return
-  actionLoading.value = true
+  if (!project.value) return;
+  actionLoading.value = true;
   try {
-    await projectsApi.deselect(project.value.id)
-    project.value.is_selected = false
-    emit('updated')
+    await projectsApi.deselect(project.value.id);
+    project.value.is_selected = false;
+    emit("updated");
   } finally {
-    actionLoading.value = false
+    actionLoading.value = false;
   }
 }
 
 async function removeFromGroup() {
-  if (!project.value?.group) return
-  actionLoading.value = true
+  if (!project.value?.group) return;
+  actionLoading.value = true;
   try {
-    await groupsApi.removeProject(project.value.group.id, project.value.id)
-    project.value.group = null
-    groupDetail.value = null
-    emit('updated')
-    ElMessage.success('Проект убран из группы')
+    await groupsApi.removeProject(project.value.group.id, project.value.id);
+    project.value.group = null;
+    groupDetail.value = null;
+    emit("updated");
+    ElMessage.success("Проект убран из группы");
   } finally {
-    actionLoading.value = false
+    actionLoading.value = false;
   }
 }
 </script>
@@ -281,6 +323,22 @@ async function removeFromGroup() {
   line-height: 1.6;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.field-empty {
+  color: #c0c4cc;
+}
+
+.label-with-tip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tip-icon {
+  font-size: 13px;
+  color: #c0c4cc;
+  cursor: help;
 }
 
 .section-title {

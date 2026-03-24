@@ -49,22 +49,38 @@ export interface GroupInfo {
   is_confirmed: boolean
 }
 
+export interface DirectionInfo {
+  id: string
+  name: string
+}
+
+export interface PriorityDirectionInfo {
+  id: string
+  name: string
+}
+
+export interface TRLLevelInfo {
+  id: string
+  name: string
+  level: number
+}
+
 export interface ProjectRead {
   id: string
   title: string
-  problem: string | null
-  goal: string | null
-  expected_result: string | null
+  direction: DirectionInfo | null
   is_ongoing: boolean
+  priority_direction: PriorityDirectionInfo | null
+  implementation_period: number
+  relevance: string
+  problem: string
+  goal: string
+  key_tasks: string
+  expected_result: string
+  trl_level: TRLLevelInfo | null
   is_selected: boolean
   is_auto_checked: boolean
   source: string
-  direction_id: string | null
-  direction_name: string | null
-  priority_direction_id: string | null
-  priority_direction_name: string | null
-  trl_id: string | null
-  trl_name: string | null
   group: GroupInfo | null
   created_at: string
   updated_at: string

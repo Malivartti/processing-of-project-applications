@@ -1,7 +1,10 @@
 <template>
   <div class="dictionaries-view">
     <h2>Справочники</h2>
-    <p class="subtitle">Управление значениями направлений, приоритетных направлений и уровней готовности технологий</p>
+    <p class="subtitle">
+      Управление значениями направлений, приоритетных направлений и уровней
+      готовности технологий
+    </p>
 
     <el-tabs>
       <el-tab-pane label="Направления" name="directions">
@@ -9,18 +12,25 @@
       </el-tab-pane>
 
       <el-tab-pane label="Приоритетные направления" name="priority_directions">
-        <DictionaryEditor type="priority_directions" @change="onDirectionsChange" />
+        <DictionaryEditor
+          type="priority_directions"
+          @change="onDirectionsChange"
+        />
       </el-tab-pane>
 
       <el-tab-pane label="УГТ (уровни готовности)" name="trl_levels">
-        <DictionaryEditor type="trl_levels" :show-level="true" @change="onDirectionsChange" />
+        <DictionaryEditor
+          type="trl_levels"
+          :show-level="true"
+          @change="onDirectionsChange"
+        />
       </el-tab-pane>
     </el-tabs>
   </div>
 </template>
 
 <script setup lang="ts">
-import DictionaryEditor from '@/components/DictionaryEditor.vue'
+import DictionaryEditor from "@/components/DictionaryEditor.vue";
 
 function onDirectionsChange() {
   // filters in ProjectsView will reload dictionaries on next open

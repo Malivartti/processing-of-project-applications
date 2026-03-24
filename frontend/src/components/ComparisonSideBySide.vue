@@ -18,7 +18,13 @@
       <div class="meta-block">
         <div class="score-area">
           <span class="score-label">Семантическое сходство</span>
-          <el-tag v-if="result.score !== null" :type="scoreType" size="large" effect="dark" class="score-tag">
+          <el-tag
+            v-if="result.score !== null"
+            :type="scoreType"
+            size="large"
+            effect="dark"
+            class="score-tag"
+          >
             {{ (result.score * 100).toFixed(1) }}%
           </el-tag>
           <el-tag v-else type="info" size="large" effect="plain">н/д</el-tag>
@@ -33,7 +39,8 @@
               effect="light"
               size="small"
               class="kw-tag"
-            >{{ kw }}</el-tag>
+              >{{ kw }}</el-tag
+            >
           </div>
         </div>
       </div>
@@ -57,8 +64,8 @@
             <!-- Meta rows -->
             <tr v-for="meta in metaRows" :key="meta.key" class="tr-meta">
               <td class="td-section">{{ meta.label }}</td>
-              <td class="td-value">{{ meta.a ?? '—' }}</td>
-              <td class="td-value">{{ meta.b ?? '—' }}</td>
+              <td class="td-value">{{ meta.a ?? "—" }}</td>
+              <td class="td-value">{{ meta.b ?? "—" }}</td>
             </tr>
             <!-- Divider row -->
             <tr class="tr-divider">
@@ -86,79 +93,112 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
-import { projectsApi, type CompareResponse } from '../api/projects'
-import HighlightedText from './HighlightedText.vue'
+import { ref, watch, computed } from "vue";
+import { projectsApi, type CompareResponse } from "../api/projects";
+import HighlightedText from "./HighlightedText.vue";
 
 const props = defineProps<{
-  modelValue: boolean
-  projectIds: [string, string] | null
-}>()
+  modelValue: boolean;
+  projectIds: [string, string] | null;
+}>();
 
 const emit = defineEmits<{
-  'update:modelValue': [value: boolean]
-}>()
+  "update:modelValue": [value: boolean];
+}>();
 
-const loading = ref(false)
-const result = ref<CompareResponse | null>(null)
+const loading = ref(false);
+const result = ref<CompareResponse | null>(null);
 
 const visible = computed({
   get: () => props.modelValue,
-  set: (v) => emit('update:modelValue', v),
-})
+  set: (v) => emit("update:modelValue", v),
+});
 
 const scoreType = computed(() => {
-  if (!result.value?.score) return 'info'
-  if (result.value.score >= 0.8) return 'danger'
-  if (result.value.score >= 0.6) return 'warning'
-  return 'success'
-})
+  if (!result.value?.score) return "info";
+  if (result.value.score >= 0.8) return "danger";
+  if (result.value.score >= 0.6) return "warning";
+  return "success";
+});
 
 const metaRows = computed(() => {
-  if (!result.value) return []
-  const a = result.value.project_a
-  const b = result.value.project_b
+  if (!result.value) return [];
+  const a = result.value.project_a;
+  const b = result.value.project_b;
+  const trlLabel = (p: typeof a) =>
+    p.trl_level
+      ? `${p.trl_level.level} (${p.trl_level.name.split("—")[1]?.trim() ?? p.trl_level.name})`
+      : null;
+  const periodLabel = (p: typeof a) =>
+    p.implementation_period ? `${p.implementation_period} сем.` : null;
   return [
-    { key: 'direction', label: 'Направление', a: a.direction_name, b: b.direction_name },
-    { key: 'priority', label: 'Приор. направление', a: a.priority_direction_name, b: b.priority_direction_name },
-    { key: 'trl', label: 'УГТ', a: a.trl_name, b: b.trl_name },
-    { key: 'ongoing', label: 'Срок', a: a.is_ongoing ? 'Бессрочный' : 'Срочный', b: b.is_ongoing ? 'Бессрочный' : 'Срочный' },
-  ]
-})
+    {
+      key: "direction",
+      label: "Направление",
+      a: a.direction?.name,
+      b: b.direction?.name,
+    },
+    { key: "trl", label: "УГТ", a: trlLabel(a), b: trlLabel(b) },
+    { key: "period", label: "Срок", a: periodLabel(a), b: periodLabel(b) },
+    {
+      key: "ongoing",
+      label: "Реализуется",
+      a: a.is_ongoing ? "Да" : "Нет",
+      b: b.is_ongoing ? "Да" : "Нет",
+    },
+  ];
+});
 
 const fieldRows = computed(() => {
-  if (!result.value) return []
-  const a = result.value.project_a
-  const b = result.value.project_b
+  if (!result.value) return [];
+  const a = result.value.project_a;
+  const b = result.value.project_b;
   return [
-    { key: 'problem', label: 'Описание проблемы', a: a.problem, b: b.problem },
-    { key: 'goal', label: 'Цель', a: a.goal, b: b.goal },
-    { key: 'result', label: 'Ожидаемый результат', a: a.expected_result, b: b.expected_result },
-  ]
-})
+    { key: "relevance", label: "Актуальность", a: a.relevance, b: b.relevance },
+    { key: "problem", label: "Проблема", a: a.problem, b: b.problem },
+    { key: "goal", label: "Цель", a: a.goal, b: b.goal },
+    {
+      key: "key_tasks",
+      label: "Ключевые задачи",
+      a: a.key_tasks,
+      b: b.key_tasks,
+    },
+    {
+      key: "result",
+      label: "Ожидаемый результат",
+      a: a.expected_result,
+      b: b.expected_result,
+    },
+  ];
+});
 
 async function fetchCompare(ids: [string, string]) {
-  loading.value = true
-  result.value = null
+  loading.value = true;
+  result.value = null;
   try {
-    result.value = await projectsApi.compare(ids[0], ids[1])
+    result.value = await projectsApi.compare(ids[0], ids[1]);
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
 watch(
   () => props.projectIds,
-  (ids) => { if (ids && props.modelValue) fetchCompare(ids) },
-)
+  (ids) => {
+    if (ids && props.modelValue) fetchCompare(ids);
+  },
+);
 
 watch(
   () => props.modelValue,
-  (open) => { if (open && props.projectIds && !result.value) fetchCompare(props.projectIds) },
-)
+  (open) => {
+    if (open && props.projectIds && !result.value)
+      fetchCompare(props.projectIds);
+  },
+);
 
 function onClosed() {
-  result.value = null
+  result.value = null;
 }
 </script>
 

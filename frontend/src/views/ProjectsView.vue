@@ -104,11 +104,9 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="Срок" width="110" align="center">
+        <el-table-column label="Реализуется" width="110" align="center">
           <template #default="{ row }">
-            <el-tag :type="row.is_ongoing ? 'info' : 'success'" size="small">
-              {{ row.is_ongoing ? 'Бессрочный' : 'Срочный' }}
-            </el-tag>
+            <span>{{ row.is_ongoing ? 'Да' : 'Нет' }}</span>
           </template>
         </el-table-column>
 

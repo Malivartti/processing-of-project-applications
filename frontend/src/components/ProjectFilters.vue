@@ -27,21 +27,6 @@
       </el-select>
 
       <el-select
-        v-model="localFilters.priority_direction_id"
-        class="filter-item filter-item--wide"
-        placeholder="Приоритетное направление"
-        clearable
-        @change="onFilterChange"
-      >
-        <el-option
-          v-for="item in priorityDirections"
-          :key="item.id"
-          :label="item.name"
-          :value="item.id"
-        />
-      </el-select>
-
-      <el-select
         v-model="localFilters.trl_id"
         class="filter-item filter-item--narrow"
         placeholder="УГТ"
@@ -54,17 +39,6 @@
           :label="item.name"
           :value="item.id"
         />
-      </el-select>
-
-      <el-select
-        v-model="isOngoingValue"
-        class="filter-item filter-item--narrow"
-        placeholder="Срок"
-        clearable
-        @change="onIsOngoingChange"
-      >
-        <el-option label="Бессрочный" value="true" />
-        <el-option label="Срочный" value="false" />
       </el-select>
 
       <el-select
@@ -111,20 +85,15 @@ const props = defineProps<{
 }>()
 
 const directions = ref<DictionaryItem[]>([])
-const priorityDirections = ref<DictionaryItem[]>([])
 const trlLevels = ref<DictionaryItem[]>([])
 
 const localFilters = reactive({
   direction_id: props.initialFilters.direction_id,
-  priority_direction_id: props.initialFilters.priority_direction_id,
   trl_id: props.initialFilters.trl_id,
   group_source: props.initialFilters.group_source,
 })
 
 const searchInput = ref(props.initialFilters.search)
-const isOngoingValue = ref<string | null>(
-  props.initialFilters.is_ongoing === null ? null : String(props.initialFilters.is_ongoing),
-)
 const hasGroupValue = ref<string | null>(
   props.initialFilters.has_group === null ? null : String(props.initialFilters.has_group),
 )
@@ -133,9 +102,7 @@ const hasActiveFilters = computed(
   () =>
     searchInput.value ||
     localFilters.direction_id ||
-    localFilters.priority_direction_id ||
     localFilters.trl_id ||
-    isOngoingValue.value !== null ||
     hasGroupValue.value !== null ||
     localFilters.group_source,
 )
@@ -157,14 +124,9 @@ function onSearchClear() {
 function onFilterChange() {
   emit('change', {
     direction_id: localFilters.direction_id,
-    priority_direction_id: localFilters.priority_direction_id,
     trl_id: localFilters.trl_id,
     group_source: localFilters.group_source,
   })
-}
-
-function onIsOngoingChange(val: string | null) {
-  emit('change', { is_ongoing: val === null ? null : val === 'true' })
 }
 
 function onHasGroupChange(val: string | null) {
@@ -173,11 +135,9 @@ function onHasGroupChange(val: string | null) {
 
 function onReset() {
   searchInput.value = ''
-  isOngoingValue.value = null
   hasGroupValue.value = null
   Object.assign(localFilters, {
     direction_id: null,
-    priority_direction_id: null,
     trl_id: null,
     group_source: null,
   })
@@ -185,13 +145,11 @@ function onReset() {
 }
 
 onMounted(async () => {
-  const [d, pd, trl] = await Promise.all([
+  const [d, trl] = await Promise.all([
     dictionariesApi.getAll('directions'),
-    dictionariesApi.getAll('priority_directions'),
     dictionariesApi.getAll('trl_levels'),
   ])
   directions.value = d
-  priorityDirections.value = pd
   trlLevels.value = trl
 })
 </script>

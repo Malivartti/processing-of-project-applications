@@ -7,29 +7,33 @@ from openpyxl import Workbook
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Direction, PriorityDirection, Project, ProjectSource, TRLLevel
+from app.models import Direction, Project, ProjectSource, TRLLevel
 from app.schemas.excel_import import ImportPreviewResponse, ImportRowError
 
 TEMPLATE_COLUMNS = [
-    "Название",
-    "Описание проблемы",
+    "Название проекта",
+    "Предполагаемое проектное направление",
+    "Проект уже реализуется в рамках проектной деятельности?",
+    "Срок реализации проекта",
+    "Актуальность",
+    "Проблема",
     "Цель",
-    "Ожидаемый результат",
-    "Текущий",
-    "Направление",
-    "Приоритетное направление",
-    "УГТ",
+    "Ключевые задачи",
+    "Ожидаемый продуктовый результат",
+    "Уровень готовности технологий на текущий момент",
 ]
 
 EXAMPLE_ROW = [
     "Пример проекта",
+    "IT",
+    "Нет",
+    2,
+    "Актуальность проекта",
     "Описание проблемы проекта",
     "Цель проекта",
-    "Ожидаемый результат",
-    "Нет",
-    "Информационные технологии",
-    "Искусственный интеллект",
-    "УГТ 3",
+    "Ключевые задачи проекта",
+    "Ожидаемый продуктовый результат",
+    3,
 ]
 
 
@@ -50,15 +54,26 @@ def _parse_bool(value: str | None) -> bool:
     return str(value).strip().lower() in ("да", "yes", "1", "true")
 
 
+def _parse_int(value: str | int | None, default: int = 0) -> int:
+    if value is None:
+        return default
+    try:
+        return int(value)
+    except (ValueError, TypeError):
+        return default
+
+
 @dataclass
 class ParsedRow:
     title: str
+    direction_id: uuid.UUID | None
+    is_ongoing: bool
+    implementation_period: int
+    relevance: str | None
     problem: str | None
     goal: str | None
+    key_tasks: str | None
     expected_result: str | None
-    is_ongoing: bool
-    direction_id: uuid.UUID | None
-    priority_direction_id: uuid.UUID | None
     trl_id: uuid.UUID | None
 
 
@@ -66,8 +81,7 @@ class ExcelImportService:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
         self._directions: dict[str, uuid.UUID] = {}
-        self._priority_directions: dict[str, uuid.UUID] = {}
-        self._trl_levels: dict[str, uuid.UUID] = {}
+        self._trl_by_level: dict[int, uuid.UUID] = {}
 
     async def _load_dicts(self) -> None:
         directions = (
@@ -75,17 +89,10 @@ class ExcelImportService:
         ).scalars().all()
         self._directions = {d.name.strip().lower(): d.id for d in directions}
 
-        priority_dirs = (
-            await self.session.execute(
-                select(PriorityDirection).where(PriorityDirection.is_active.is_(True))
-            )
-        ).scalars().all()
-        self._priority_directions = {p.name.strip().lower(): p.id for p in priority_dirs}
-
         trl_levels = (
             await self.session.execute(select(TRLLevel).where(TRLLevel.is_active.is_(True)))
         ).scalars().all()
-        self._trl_levels = {t.name.strip().lower(): t.id for t in trl_levels}
+        self._trl_by_level = {t.level: t.id for t in trl_levels}
 
     async def _get_existing_titles(self) -> set[str]:
         result = await self.session.execute(select(Project.title))
@@ -112,20 +119,32 @@ class ExcelImportService:
             text = str(val).strip()
             return text if text else None
 
+        def get_raw(row: tuple, col_name: str):
+            idx = col_idx.get(col_name)
+            if idx is None or idx >= len(row):
+                return None
+            return row[idx]
+
         data = []
         for row in rows[1:]:
             if all(cell is None for cell in row):
                 continue
             data.append(
                 {
-                    "title": get_cell(row, "Название"),
-                    "problem": get_cell(row, "Описание проблемы"),
+                    "title": get_cell(row, "Название проекта"),
+                    "direction_name": get_cell(row, "Предполагаемое проектное направление"),
+                    "is_ongoing_raw": get_cell(
+                        row, "Проект уже реализуется в рамках проектной деятельности?"
+                    ),
+                    "implementation_period_raw": get_raw(row, "Срок реализации проекта"),
+                    "relevance": get_cell(row, "Актуальность"),
+                    "problem": get_cell(row, "Проблема"),
                     "goal": get_cell(row, "Цель"),
-                    "expected_result": get_cell(row, "Ожидаемый результат"),
-                    "is_ongoing_raw": get_cell(row, "Текущий"),
-                    "direction_name": get_cell(row, "Направление"),
-                    "priority_direction_name": get_cell(row, "Приоритетное направление"),
-                    "trl_name": get_cell(row, "УГТ"),
+                    "key_tasks": get_cell(row, "Ключевые задачи"),
+                    "expected_result": get_cell(row, "Ожидаемый продуктовый результат"),
+                    "trl_level_raw": get_raw(
+                        row, "Уровень готовности технологий на текущий момент"
+                    ),
                 }
             )
         return data
@@ -150,13 +169,12 @@ class ExcelImportService:
             title = raw.get("title")
             if not title:
                 errors.append(
-                    ImportRowError(row=i, field="Название", message="Обязательное поле")
+                    ImportRowError(row=i, field="Название проекта", message="Обязательное поле")
                 )
                 continue
 
             title_lower = title.strip().lower()
 
-            # Duplicate within batch or in DB — warning, not blocker
             if title_lower in seen_titles or title_lower in existing_titles:
                 if title_lower not in seen_duplicates:
                     seen_duplicates.add(title_lower)
@@ -175,32 +193,17 @@ class ExcelImportService:
                         )
                     )
 
-            priority_direction_id = None
-            if raw.get("priority_direction_name"):
-                priority_direction_id = self._priority_directions.get(
-                    raw["priority_direction_name"].lower()
-                )
-                if priority_direction_id is None:
-                    row_errors.append(
-                        ImportRowError(
-                            row=i,
-                            field="Приоритетное направление",
-                            message=(
-                                f"Значение '{raw['priority_direction_name']}'"
-                                " не найдено в справочнике"
-                            ),
-                        )
-                    )
-
             trl_id = None
-            if raw.get("trl_name"):
-                trl_id = self._trl_levels.get(raw["trl_name"].lower())
+            trl_raw = raw.get("trl_level_raw")
+            if trl_raw is not None:
+                trl_num = _parse_int(trl_raw)
+                trl_id = self._trl_by_level.get(trl_num)
                 if trl_id is None:
                     row_errors.append(
                         ImportRowError(
                             row=i,
                             field="УГТ",
-                            message=f"Значение '{raw['trl_name']}' не найдено в справочнике",
+                            message=f"Уровень {trl_raw} не найден в справочнике",
                         )
                     )
 
@@ -211,12 +214,16 @@ class ExcelImportService:
             valid_rows.append(
                 ParsedRow(
                     title=title,
+                    direction_id=direction_id,
+                    is_ongoing=_parse_bool(raw.get("is_ongoing_raw")),
+                    implementation_period=_parse_int(
+                        raw.get("implementation_period_raw"), default=0
+                    ),
+                    relevance=raw.get("relevance"),
                     problem=raw.get("problem"),
                     goal=raw.get("goal"),
+                    key_tasks=raw.get("key_tasks"),
                     expected_result=raw.get("expected_result"),
-                    is_ongoing=_parse_bool(raw.get("is_ongoing_raw")),
-                    direction_id=direction_id,
-                    priority_direction_id=priority_direction_id,
                     trl_id=trl_id,
                 )
             )
@@ -233,15 +240,14 @@ class ExcelImportService:
         projects = [
             Project(
                 title=row.title[:80],
+                direction_id=row.direction_id,
+                is_ongoing=row.is_ongoing,
+                implementation_period=row.implementation_period,
+                relevance=row.relevance or "",
                 problem=row.problem or "",
                 goal=row.goal or "",
+                key_tasks=row.key_tasks or "",
                 expected_result=row.expected_result or "",
-                relevance="",
-                key_tasks="",
-                implementation_period="",
-                is_ongoing=row.is_ongoing,
-                direction_id=row.direction_id,
-                priority_direction_id=row.priority_direction_id,
                 trl_id=row.trl_id,
                 source=ProjectSource.auto,
             )

@@ -64,7 +64,7 @@ class ProjectRead(BaseModel):
     direction: DirectionInfo | None
     is_ongoing: bool
     priority_direction: PriorityDirectionInfo | None
-    implementation_period: str
+    implementation_period: int
     relevance: str
     problem: str
     goal: str
@@ -97,7 +97,7 @@ class ProjectCreate(BaseModel):
     direction_id: uuid.UUID
     is_ongoing: bool = False
     priority_direction_id: uuid.UUID | None = None
-    implementation_period: str = Field(..., max_length=100)
+    implementation_period: int = Field(..., ge=1)
     relevance: str = Field(..., max_length=1500)
     problem: str = Field(..., max_length=1500)
     goal: str = Field(..., max_length=1000)
@@ -122,7 +122,7 @@ class ProjectUpdate(BaseModel):
     direction_id: uuid.UUID | None = None
     is_ongoing: bool | None = None
     priority_direction_id: uuid.UUID | None = None
-    implementation_period: str | None = Field(default=None, max_length=100)
+    implementation_period: int | None = Field(default=None, ge=1)
     relevance: str | None = Field(default=None, max_length=1500)
     problem: str | None = Field(default=None, max_length=1500)
     goal: str | None = Field(default=None, max_length=1000)

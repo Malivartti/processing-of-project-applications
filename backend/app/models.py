@@ -128,7 +128,7 @@ class Project(Base):
         ForeignKey("priority_directions.id", ondelete="SET NULL"),
         nullable=True,
     )
-    implementation_period: Mapped[str] = mapped_column(String(100), nullable=False)
+    implementation_period: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     relevance: Mapped[str] = mapped_column(Text, nullable=False)
     problem: Mapped[str] = mapped_column(Text, nullable=False)
     goal: Mapped[str] = mapped_column(Text, nullable=False)
