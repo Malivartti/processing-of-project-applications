@@ -163,7 +163,7 @@
 
     <!-- Floating action panel (list mode only) -->
     <transition name="float-panel">
-      <div v-if="store.viewMode === 'list' && checkedRows.length >= 2" class="float-actions">
+      <div v-if="store.viewMode === 'list' && checkedRows.length >= 1" class="float-actions">
         <span class="float-label">Выбрано: {{ checkedRows.length }}</span>
         <el-button
           v-if="checkedRows.length === 2"
@@ -172,7 +172,7 @@
         >
           Сравнить
         </el-button>
-        <el-button type="primary" size="small" @click="openCreateGroup">Создать группу</el-button>
+        <el-button v-if="checkedRows.length >= 2" type="primary" size="small" @click="openCreateGroup">Создать группу</el-button>
         <el-button size="small" @click="addToSelection">Добавить в отбор</el-button>
         <el-button size="small" @click="clearChecked">Сбросить</el-button>
       </div>
