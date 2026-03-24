@@ -7,9 +7,10 @@ import numpy as np
 import pymorphy3
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from stop_words import get_stop_words as _get_stop_words
 
 from app.exceptions import NotFoundError
-from app.models import Project, SimilarityScore
+from app.models import Project, SimilarityScore, Stopword
 from app.repositories.project import ProjectRepo
 from app.schemas.compare import CompareResponse
 from app.services.project import ProjectService
@@ -20,11 +21,11 @@ _KEEP_POS = {"NOUN", "VERB", "INFN"}
 # Minimum word length after lemmatisation
 _MIN_LEN = 4  # > 3 chars
 
-# Simple Russian stop-words (common auxiliaries / pronouns that pass POS filter)
-_STOP_LEMMAS = {
+# Comprehensive Russian stop-words (auxiliaries / pronouns that pass POS filter)
+_STOP_LEMMAS = set(_get_stop_words("russian")) | {
+    # common auxiliaries that pass POS filter (VERB/INFN)
     "быть", "стать", "являться", "иметь", "делать",
     "получать", "обеспечивать", "осуществлять",
-    "это", "весь", "свой", "который", "такой",
 }
 
 _WORD_RE = re.compile(r"[а-яёa-z]+", re.UNICODE | re.IGNORECASE)
@@ -32,8 +33,9 @@ _WORD_RE = re.compile(r"[а-яёa-z]+", re.UNICODE | re.IGNORECASE)
 _morph = pymorphy3.MorphAnalyzer()
 
 
-def _extract_lemmas(text: str) -> set[str]:
+def _extract_lemmas(text: str, extra_stop: set[str] | None = None) -> set[str]:
     """Return a set of significant lemmas from *text*."""
+    stop = _STOP_LEMMAS if not extra_stop else _STOP_LEMMAS | extra_stop
     lemmas: set[str] = set()
     for token in _WORD_RE.findall(text.lower()):
         parsed = _morph.parse(token)
@@ -46,7 +48,7 @@ def _extract_lemmas(text: str) -> set[str]:
         lemma = best.normal_form
         if len(lemma) <= _MIN_LEN - 1:  # length must be > 3, i.e. >= 4
             continue
-        if lemma in _STOP_LEMMAS:
+        if lemma in stop:
             continue
         lemmas.add(lemma)
     return lemmas
@@ -88,8 +90,14 @@ class CompareService:
         if project_b is None:
             raise NotFoundError(detail=f"Project {id_b} not found")
 
+        # Load domain-specific stopwords from DB
+        result = await self.session.execute(
+            select(Stopword).where(Stopword.is_active.is_(True))
+        )
+        db_stopwords = {row.name.lower() for row in result.scalars().all()}
+
         score = await self._get_score(project_a, project_b)
-        keywords = _get_keywords(project_a, project_b)
+        keywords = _get_keywords(project_a, project_b, db_stopwords)
 
         return CompareResponse(
             project_a=self.project_service._to_read(project_a),
@@ -125,12 +133,14 @@ class CompareService:
         return None
 
 
-def _get_keywords(project_a: Project, project_b: Project) -> list[str]:
+def _get_keywords(
+    project_a: Project, project_b: Project, extra_stop: set[str] | None = None
+) -> list[str]:
     """Return sorted list of common significant lemmas from both projects."""
     text_a = _project_text(project_a)
     text_b = _project_text(project_b)
     if not text_a or not text_b:
         return []
-    lemmas_a = _extract_lemmas(text_a)
-    lemmas_b = _extract_lemmas(text_b)
+    lemmas_a = _extract_lemmas(text_a, extra_stop)
+    lemmas_b = _extract_lemmas(text_b, extra_stop)
     return sorted(lemmas_a & lemmas_b)

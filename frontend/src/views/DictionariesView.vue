@@ -2,8 +2,8 @@
   <div class="dictionaries-view">
     <h2>Справочники</h2>
     <p class="subtitle">
-      Управление значениями направлений, приоритетных направлений и уровней
-      готовности технологий
+      Управление значениями направлений, приоритетных направлений, уровней
+      готовности технологий и стоп-слов для генерации названий групп
     </p>
 
     <el-tabs>
@@ -25,6 +25,14 @@
           @change="onDirectionsChange"
         />
       </el-tab-pane>
+
+      <el-tab-pane label="Стоп-слова" name="stopwords">
+        <p class="tab-hint">
+          Слова, которые исключаются при автоматической генерации названий групп.
+          Базовый список (~175 слов) добавляется автоматически — здесь только доменные дополнения.
+        </p>
+        <DictionaryEditor type="stopwords" @change="onDirectionsChange" />
+      </el-tab-pane>
     </el-tabs>
   </div>
 </template>
@@ -45,5 +53,11 @@ function onDirectionsChange() {
 .subtitle {
   color: #6b7280;
   margin-bottom: 24px;
+}
+
+.tab-hint {
+  color: #6b7280;
+  font-size: 13px;
+  margin-bottom: 12px;
 }
 </style>

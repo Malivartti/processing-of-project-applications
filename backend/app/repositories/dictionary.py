@@ -2,11 +2,13 @@ from typing import Generic, Type, TypeVar
 from uuid import UUID
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Direction, PriorityDirection, TRLLevel
+from app.exceptions import ConflictError
+from app.models import Direction, PriorityDirection, Stopword, TRLLevel
 
-T = TypeVar("T", Direction, PriorityDirection, TRLLevel)
+T = TypeVar("T", Direction, PriorityDirection, TRLLevel, Stopword)
 
 
 class DictionaryRepo(Generic[T]):
@@ -30,7 +32,11 @@ class DictionaryRepo(Generic[T]):
     async def create(self, **kwargs: object) -> T:
         item = self.model(**kwargs)
         self.session.add(item)
-        await self.session.commit()
+        try:
+            await self.session.commit()
+        except IntegrityError:
+            await self.session.rollback()
+            raise ConflictError(detail="Такое значение уже существует")
         await self.session.refresh(item)
         return item
 

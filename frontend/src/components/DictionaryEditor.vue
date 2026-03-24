@@ -9,7 +9,7 @@
           <span v-else :class="{ 'text-inactive': !row.is_active }">
             {{ row.name }}
             <el-icon v-if="!row.is_active" class="icon-inactive" title="Неактивно">
-              <component :is="MinusCircle" />
+              <component :is="RemoveFilled" />
             </el-icon>
           </span>
         </template>
@@ -93,7 +93,7 @@
 <script setup lang="ts">
 import { ref, markRaw } from 'vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
-import { Edit, Delete, MinusCircle } from '@element-plus/icons-vue'
+import { Edit, Delete, RemoveFilled } from '@element-plus/icons-vue'
 import { dictionariesApi, type DictionaryItem, type DictionaryType } from '@/api/dictionaries'
 
 const props = defineProps<{
@@ -187,6 +187,8 @@ async function handleAdd() {
     newLevel.value = undefined
     ElMessage.success('Значение добавлено')
     emit('change')
+  } catch {
+    // error already shown by axios interceptor
   } finally {
     adding.value = false
   }

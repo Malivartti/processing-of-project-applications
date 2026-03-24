@@ -8,7 +8,7 @@ export interface DictionaryItem {
   level?: number | null
 }
 
-export type DictionaryType = 'directions' | 'priority_directions' | 'trl_levels'
+export type DictionaryType = 'directions' | 'priority_directions' | 'trl_levels' | 'stopwords'
 
 export const dictionariesApi = {
   async getAll(type: DictionaryType, activeOnly = true): Promise<DictionaryItem[]> {

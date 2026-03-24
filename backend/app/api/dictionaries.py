@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models import Direction, PriorityDirection, TRLLevel
+from app.models import Direction, PriorityDirection, Stopword, TRLLevel
 from app.schemas.dictionary import DictionaryItemCreate, DictionaryItemRead, DictionaryItemUpdate
 from app.services.dictionary import DictionaryService
 
@@ -14,6 +14,7 @@ DICT_TYPE_MAP = {
     "directions": Direction,
     "priority_directions": PriorityDirection,
     "trl_levels": TRLLevel,
+    "stopwords": Stopword,
 }
 
 

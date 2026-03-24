@@ -1,12 +1,41 @@
 from __future__ import annotations
 
+import re
 import uuid
-from collections import defaultdict
+from collections import Counter, defaultdict
 from collections.abc import Callable
 
 import numpy as np
 from sklearn.cluster import AgglomerativeClustering
 from sklearn.metrics.pairwise import cosine_similarity
+from stop_words import get_stop_words as _get_stop_words
+
+_STOPWORDS = set(_get_stop_words("russian")) | {
+    # domain-specific words common in all project applications
+    "разработка", "создание", "проект", "исследование", "система",
+    "разработать", "создать", "исследовать", "внедрение", "реализация",
+    "повышение", "улучшение", "обеспечение", "применение", "использование",
+}
+_GOOD_POS = {"NOUN", "ADJF", "ADJS"}
+
+
+def _generate_group_name(
+    titles: list[str], morph, fallback: str, extra_stopwords: set[str] | None = None
+) -> str:
+    """Generate a descriptive name for a group from project titles using pymorphy3."""
+    stopwords = _STOPWORDS if not extra_stopwords else _STOPWORDS | extra_stopwords
+    word_counts: Counter = Counter()
+    for title in titles:
+        for raw in re.findall(r"[а-яёА-ЯЁ]{3,}", title):
+            parsed = morph.parse(raw.lower())[0]
+            lemma = parsed.normal_form
+            pos = parsed.tag.POS
+            if lemma not in stopwords and pos in _GOOD_POS:
+                word_counts[lemma] += 1
+    if not word_counts:
+        return fallback
+    top = [w for w, _ in word_counts.most_common(3)]
+    return ", ".join(w.capitalize() for w in top)
 
 
 class ClusteringService:
@@ -75,6 +104,7 @@ def run_auto_grouping(
     context: str,
     grouping_run_id: uuid.UUID | None = None,
     progress_callback: Callable[[str, int, int], None] | None = None,
+    extra_stopwords: set[str] | None = None,
 ) -> dict:
     """Full auto-grouping pipeline. Saves results to DB.
 
@@ -101,7 +131,17 @@ def run_auto_grouping(
         Project,
         RejectedPair,
         SimilarityScore,
+        Stopword,
     )
+
+    # Load domain-specific stopwords from DB (active only)
+    if extra_stopwords is None:
+        db_words: list[Stopword] = list(
+            session.execute(
+                sa.select(Stopword).where(Stopword.is_active.is_(True))
+            ).scalars().all()
+        )
+        extra_stopwords = {w.name.lower() for w in db_words}
 
     ctx = GroupContext(context)
 
@@ -180,14 +220,27 @@ def run_auto_grouping(
     session.flush()
 
     # 7. Create new groups, save similarity scores, update project group_ids
+    try:
+        import pymorphy3
+        morph = pymorphy3.MorphAnalyzer()
+    except Exception:
+        morph = None
+
     total_groups = len(groups_indices)
     projects_in_groups = 0
     for i, group_indices in enumerate(groups_indices):
         if progress_callback is not None:
             progress_callback("saving", i, total_groups)
         group_projects = [projects[idx] for idx in group_indices]
+        fallback = f"Авто-группа {i + 1}"
+        if morph is not None:
+            group_name = _generate_group_name(
+                [p.title for p in group_projects], morph, fallback, extra_stopwords
+            )
+        else:
+            group_name = fallback
         group = Group(
-            name=f"Авто-группа {i + 1}",
+            name=group_name,
             source=GroupSource.auto,
             context=ctx,
             is_confirmed=False,
