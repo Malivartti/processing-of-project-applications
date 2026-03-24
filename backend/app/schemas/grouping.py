@@ -36,6 +36,7 @@ class GroupingStatusResponse(BaseModel):
     total: int | None = None
     status: str | None = None
     error_message: str | None = None
+    groups_found: int | None = None
 
 
 class GroupingRunStartRequest(BaseModel):

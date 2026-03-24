@@ -103,6 +103,7 @@ async def get_grouping_status(run_id: str) -> GroupingStatusResponse:
             total=int(data["total"]) if data.get("total") is not None else None,
             status=data.get("status"),
             error_message=data.get("error_message"),
+            groups_found=int(data["groups_found"]) if data.get("groups_found") is not None else None,
         )
     finally:
         await r.aclose()

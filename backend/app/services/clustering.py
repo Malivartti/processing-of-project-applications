@@ -230,7 +230,7 @@ def run_auto_grouping(
     projects_in_groups = 0
     for i, group_indices in enumerate(groups_indices):
         if progress_callback is not None:
-            progress_callback("saving", i, total_groups)
+            progress_callback("saving", i + 1, total_groups)
         group_projects = [projects[idx] for idx in group_indices]
         fallback = f"Авто-группа {i + 1}"
         if morph is not None:

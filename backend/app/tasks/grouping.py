@@ -88,6 +88,7 @@ def run_grouping_task(run_id: str, threshold: float, context: str) -> dict:
                     "current": str(result["projects_processed"]),
                     "total": str(result["projects_processed"]),
                     "status": "completed",
+                    "groups_found": str(result["groups_found"]),
                 },
             )
             r.expire(progress_key, PROGRESS_TTL)

@@ -45,9 +45,24 @@ const status = ref('')
 
 const stageLabel = computed(() => STAGE_LABELS[stage.value] || stage.value || 'Запуск...')
 
+// Each stage contributes a portion of the 0-100% range so the bar never goes backwards
+const STAGE_RANGES: Record<string, [number, number]> = {
+  pending:    [0,  5],
+  embeddings: [5,  25],
+  similarity: [25, 50],
+  clustering: [50, 60],
+  saving:     [60, 100],
+  done:       [100, 100],
+}
+
 const percentage = computed(() => {
-  if (total.value === 0) return 0
-  return Math.min(100, Math.round((current.value / total.value) * 100))
+  if (stage.value === 'done') return 100
+  const range = STAGE_RANGES[stage.value]
+  if (!range) return 0
+  const [base, end] = range
+  if (total.value === 0) return base
+  const within = (current.value / total.value) * (end - base)
+  return Math.min(100, Math.round(base + within))
 })
 
 const isRunning = computed(() => stage.value !== 'done' && status.value !== 'failed')
@@ -89,7 +104,7 @@ async function poll() {
 
 function startPolling() {
   poll()
-  intervalId = setInterval(poll, 2000)
+  intervalId = setInterval(poll, 500)
 }
 
 function stopPolling() {
