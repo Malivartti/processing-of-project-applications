@@ -11,7 +11,7 @@
       <span class="drawer-title">{{ project?.title || "Загрузка..." }}</span>
     </template>
 
-    <div v-if="loading || !drawerOpened" class="loading-wrapper">
+    <div v-if="loading || (!drawerOpened && !project)" class="loading-wrapper">
       <el-skeleton :rows="8" animated />
     </div>
 
@@ -174,6 +174,9 @@ const actionLoading = ref(false);
 const project = ref<ProjectRead | null>(null);
 const groupDetail = ref<GroupRead | null>(null);
 
+const projectCache = new Map<string, ProjectRead>();
+const groupCache = new Map<string, GroupRead>();
+
 const textFields = computed(() => {
   if (!project.value) return [];
   return [
@@ -203,13 +206,21 @@ watch(
 );
 
 async function loadProject(id: string) {
+  if (projectCache.has(id)) {
+    project.value = projectCache.get(id)!;
+    const groupId = project.value.group?.id;
+    groupDetail.value = groupId ? (groupCache.get(groupId) ?? null) : null;
+    return;
+  }
   loading.value = true;
   project.value = null;
   groupDetail.value = null;
   try {
     project.value = await projectsApi.getById(id);
+    projectCache.set(id, project.value);
     if (project.value.group) {
       groupDetail.value = await groupsApi.getById(project.value.group.id);
+      groupCache.set(project.value.group.id, groupDetail.value);
     }
   } catch {
     ElMessage.error("Не удалось загрузить проект");
