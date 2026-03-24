@@ -12,6 +12,7 @@ class DictionaryItemCreate(BaseModel):
 class DictionaryItemUpdate(BaseModel):
     name: str | None = None
     level: int | None = None  # Only used for trl_levels
+    is_active: bool | None = None
 
 
 class DictionaryItemRead(BaseModel):

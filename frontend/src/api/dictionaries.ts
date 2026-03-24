@@ -39,4 +39,9 @@ export const dictionariesApi = {
   async deactivate(type: DictionaryType, id: string): Promise<void> {
     await apiClient.delete(`/dictionaries/${type}/${id}`)
   },
+
+  async setActive(type: DictionaryType, id: string, is_active: boolean): Promise<DictionaryItem> {
+    const { data } = await apiClient.patch<DictionaryItem>(`/dictionaries/${type}/${id}`, { is_active })
+    return data
+  },
 }

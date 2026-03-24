@@ -21,12 +21,14 @@ class DictionaryService:
             kwargs["level"] = level
         return await self.repo.create(**kwargs)
 
-    async def update(self, item_id: UUID, name: str | None, level: int | None) -> object:
+    async def update(self, item_id: UUID, name: str | None, level: int | None, is_active: bool | None = None) -> object:
         data: dict = {}
         if name is not None:
             data["name"] = name
         if level is not None and hasattr(self.model, "level"):
             data["level"] = level
+        if is_active is not None:
+            data["is_active"] = is_active
         item = await self.repo.update(item_id, data)
         if item is None:
             raise NotFoundError(detail=f"Item {item_id} not found")

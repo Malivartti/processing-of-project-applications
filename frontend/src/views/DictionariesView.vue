@@ -31,7 +31,7 @@
           Слова, которые исключаются при автоматической генерации названий групп.
           Базовый список (~175 слов) добавляется автоматически — здесь только доменные дополнения.
         </p>
-        <DictionaryEditor type="stopwords" @change="onDirectionsChange" />
+        <DictionaryEditor type="stopwords" :tags-mode="true" @change="onDirectionsChange" />
       </el-tab-pane>
     </el-tabs>
   </div>

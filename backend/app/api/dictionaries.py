@@ -56,7 +56,7 @@ async def update(
 ) -> object:
     model = resolve_model(dict_type)
     service = DictionaryService(db, model)
-    return await service.update(item_id, name=body.name, level=body.level)
+    return await service.update(item_id, name=body.name, level=body.level, is_active=body.is_active)
 
 
 @router.delete("/{dict_type}/{item_id}", status_code=204)
