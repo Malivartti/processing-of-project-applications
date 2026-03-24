@@ -45,6 +45,12 @@
         </div>
       </div>
 
+      <!-- Highlight controls -->
+      <div class="highlight-controls">
+        <el-checkbox v-model="showKeywords">Подсветка ключевых слов</el-checkbox>
+        <el-checkbox v-model="showSubstrings">Подсветка общих подстрок</el-checkbox>
+      </div>
+
       <!-- Comparison table -->
       <div class="compare-table-wrap">
         <table class="compare-table">
@@ -75,10 +81,18 @@
             <tr v-for="field in fieldRows" :key="field.key" class="tr-field">
               <td class="td-section">{{ field.label }}</td>
               <td class="td-value td-text">
-                <HighlightedText :text="field.a" :keywords="result.highlight_tokens" />
+                <HighlightedText
+                  :text="field.a"
+                  :keywords="showKeywords ? result.highlight_tokens : []"
+                  :substrings="fieldSubstrings[field.key]"
+                />
               </td>
               <td class="td-value td-text">
-                <HighlightedText :text="field.b" :keywords="result.highlight_tokens" />
+                <HighlightedText
+                  :text="field.b"
+                  :keywords="showKeywords ? result.highlight_tokens : []"
+                  :substrings="fieldSubstrings[field.key]"
+                />
               </td>
             </tr>
           </tbody>
@@ -94,6 +108,40 @@
 
 <script setup lang="ts">
 import { ref, watch, computed } from "vue";
+
+const MIN_SUBSTRING_LEN = 10
+
+function findCommonSubstrings(textA: string, textB: string): string[] {
+  if (!textA || !textB) return []
+  const a = textA.toLowerCase()
+  const b = textB.toLowerCase()
+  const m = a.length
+  const n = b.length
+
+  const found = new Set<string>()
+  let prev = new Array<number>(n + 1).fill(0)
+  let curr = new Array<number>(n + 1).fill(0)
+
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      if (a[i - 1] === b[j - 1]) {
+        curr[j] = prev[j - 1] + 1
+        if (curr[j] >= MIN_SUBSTRING_LEN) {
+          found.add(textA.slice(i - curr[j], i))
+        }
+      } else {
+        curr[j] = 0
+      }
+    }
+    ;[prev, curr] = [curr, new Array<number>(n + 1).fill(0)]
+  }
+
+  // Keep only maximal substrings (remove those contained in a longer one)
+  const arr = Array.from(found)
+  return arr.filter(
+    (s) => !arr.some((longer) => longer.length > s.length && longer.toLowerCase().includes(s.toLowerCase())),
+  )
+}
 import { projectsApi, type CompareResponse } from "../api/projects";
 import HighlightedText from "./HighlightedText.vue";
 
@@ -108,6 +156,8 @@ const emit = defineEmits<{
 
 const loading = ref(false);
 const result = ref<CompareResponse | null>(null);
+const showKeywords = ref(true);
+const showSubstrings = ref(false);
 
 const visible = computed({
   get: () => props.modelValue,
@@ -170,6 +220,15 @@ const fieldRows = computed(() => {
       b: b.expected_result,
     },
   ];
+});
+
+const fieldSubstrings = computed((): Record<string, string[]> => {
+  if (!showSubstrings.value || !result.value) return {};
+  const res: Record<string, string[]> = {};
+  for (const field of fieldRows.value) {
+    res[field.key] = findCommonSubstrings(field.a ?? "", field.b ?? "");
+  }
+  return res;
 });
 
 async function fetchCompare(ids: [string, string]) {
@@ -269,6 +328,13 @@ function onClosed() {
 
 .kw-tag {
   font-size: 13px;
+}
+
+/* ── Highlight controls ───────────────────────────── */
+.highlight-controls {
+  display: flex;
+  gap: 24px;
+  padding: 8px 4px;
 }
 
 /* ── Compare table ────────────────────────────────── */
