@@ -8,3 +8,4 @@ class CompareResponse(BaseModel):
     project_b: ProjectRead
     score: float | None
     keywords: list[str]
+    highlight_tokens: list[str]

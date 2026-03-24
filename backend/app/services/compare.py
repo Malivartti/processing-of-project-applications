@@ -33,10 +33,10 @@ _WORD_RE = re.compile(r"[а-яёa-z]+", re.UNICODE | re.IGNORECASE)
 _morph = pymorphy3.MorphAnalyzer()
 
 
-def _extract_lemmas(text: str, extra_stop: set[str] | None = None) -> set[str]:
-    """Return a set of significant lemmas from *text*."""
+def _extract_lemmas(text: str, extra_stop: set[str] | None = None) -> dict[str, set[str]]:
+    """Return a mapping of significant lemmas → set of original tokens from *text*."""
     stop = _STOP_LEMMAS if not extra_stop else _STOP_LEMMAS | extra_stop
-    lemmas: set[str] = set()
+    lemma_tokens: dict[str, set[str]] = {}
     for token in _WORD_RE.findall(text.lower()):
         parsed = _morph.parse(token)
         if not parsed:
@@ -50,8 +50,8 @@ def _extract_lemmas(text: str, extra_stop: set[str] | None = None) -> set[str]:
             continue
         if lemma in stop:
             continue
-        lemmas.add(lemma)
-    return lemmas
+        lemma_tokens.setdefault(lemma, set()).add(token)
+    return lemma_tokens
 
 
 def _project_text(project: Project) -> str:
@@ -97,13 +97,14 @@ class CompareService:
         db_stopwords = {row.name.lower() for row in result.scalars().all()}
 
         score = await self._get_score(project_a, project_b)
-        keywords = _get_keywords(project_a, project_b, db_stopwords)
+        keywords, highlight_tokens = _get_keywords(project_a, project_b, db_stopwords)
 
         return CompareResponse(
             project_a=self.project_service._to_read(project_a),
             project_b=self.project_service._to_read(project_b),
             score=score,
             keywords=keywords,
+            highlight_tokens=highlight_tokens,
         )
 
     async def _get_score(
@@ -122,7 +123,7 @@ class CompareService:
                 )
             )
         )
-        existing = result.scalar_one_or_none()
+        existing = result.scalars().first()
         if existing is not None:
             return existing.score
 
@@ -135,12 +136,21 @@ class CompareService:
 
 def _get_keywords(
     project_a: Project, project_b: Project, extra_stop: set[str] | None = None
-) -> list[str]:
-    """Return sorted list of common significant lemmas from both projects."""
+) -> tuple[list[str], list[str]]:
+    """Return (keywords, highlight_tokens) for common significant lemmas.
+
+    keywords: sorted lemmas for display.
+    highlight_tokens: all original word forms from both texts that share a common lemma.
+    """
     text_a = _project_text(project_a)
     text_b = _project_text(project_b)
     if not text_a or not text_b:
-        return []
-    lemmas_a = _extract_lemmas(text_a, extra_stop)
-    lemmas_b = _extract_lemmas(text_b, extra_stop)
-    return sorted(lemmas_a & lemmas_b)
+        return [], []
+    map_a = _extract_lemmas(text_a, extra_stop)
+    map_b = _extract_lemmas(text_b, extra_stop)
+    common_lemmas = map_a.keys() & map_b.keys()
+    tokens: set[str] = set()
+    for lemma in common_lemmas:
+        tokens |= map_a[lemma]
+        tokens |= map_b[lemma]
+    return sorted(common_lemmas), sorted(tokens)

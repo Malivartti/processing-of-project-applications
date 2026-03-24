@@ -91,6 +91,7 @@ export interface CompareResponse {
   project_b: ProjectRead
   score: number | null
   keywords: string[]
+  highlight_tokens: string[]
 }
 
 export const projectsApi = {

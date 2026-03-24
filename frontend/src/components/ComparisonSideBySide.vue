@@ -75,10 +75,10 @@
             <tr v-for="field in fieldRows" :key="field.key" class="tr-field">
               <td class="td-section">{{ field.label }}</td>
               <td class="td-value td-text">
-                <HighlightedText :text="field.a" :keywords="result.keywords" />
+                <HighlightedText :text="field.a" :keywords="result.highlight_tokens" />
               </td>
               <td class="td-value td-text">
-                <HighlightedText :text="field.b" :keywords="result.keywords" />
+                <HighlightedText :text="field.b" :keywords="result.highlight_tokens" />
               </td>
             </tr>
           </tbody>
