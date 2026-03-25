@@ -21,14 +21,16 @@
 
     <el-divider />
 
-    <!-- Filters + toolbar -->
+    <!-- Filters -->
+    <ProjectFilters
+      :initial-filters="selectionFilters"
+      @change="onFiltersChange"
+      @reset="onFiltersReset"
+    />
+
+    <!-- Actions toolbar -->
     <div class="toolbar">
-      <ProjectFilters
-        :initial-filters="selectionFilters"
-        @change="onFiltersChange"
-        @reset="onFiltersReset"
-      />
-      <div class="toolbar-right">
+      <div class="toolbar-left">
         <GroupingProgressBar
           v-if="activeRunId"
           :run-id="activeRunId"
@@ -46,6 +48,8 @@
             Проверить на схожесть
           </el-button>
         </template>
+      </div>
+      <div class="toolbar-right">
         <el-radio-group :model-value="store.viewMode" size="small" class="view-toggle" @change="onViewModeChange">
           <el-radio-button value="list">Список</el-radio-button>
           <el-radio-button value="groups">Группы</el-radio-button>
@@ -108,7 +112,7 @@
         </el-table-column>
       </el-table>
 
-      <div class="pagination-wrapper">
+      <div v-if="store.total > pageSize" class="pagination-wrapper">
         <el-pagination
           v-model:current-page="currentPage"
           v-model:page-size="pageSize"
@@ -116,6 +120,8 @@
           :page-sizes="[25, 50, 100]"
           layout="total, sizes, prev, pager, next"
           background
+          prev-text="Назад"
+          next-text="Вперёд"
           @current-change="onPageChange"
           @size-change="onSizeChange"
         />
@@ -317,21 +323,22 @@ watch(
 
 .toolbar {
   display: flex;
-  align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
+  align-items: center;
+  margin-top: 12px;
+  margin-bottom: 4px;
+}
+
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .toolbar-right {
   display: flex;
   align-items: center;
-  gap: 12px;
-  flex-shrink: 0;
-}
-
-.view-toggle {
-  flex-shrink: 0;
-  margin-top: 2px;
+  gap: 8px;
 }
 
 .pagination-wrapper {
