@@ -88,6 +88,11 @@ export const groupsApi = {
     return data
   },
 
+  async addProject(groupId: string, projectId: string): Promise<GroupRead> {
+    const { data } = await apiClient.post<GroupRead>(`/groups/${groupId}/projects`, { project_id: projectId })
+    return data
+  },
+
   async removeProject(groupId: string, projectId: string): Promise<GroupRead> {
     const { data } = await apiClient.delete<GroupRead>(`/groups/${groupId}/projects/${projectId}`)
     return data

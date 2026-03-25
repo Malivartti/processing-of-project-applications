@@ -77,6 +77,14 @@
 
               <!-- Action buttons -->
               <div class="group-actions" @click.stop>
+                <el-tooltip v-if="group.projects.length === 2" content="Сравнить проекты" placement="top">
+                  <el-button
+                    text
+                    size="small"
+                    :icon="CompareIcon"
+                    @click.stop="openGroupCompare(group.projects)"
+                  />
+                </el-tooltip>
                 <el-tooltip content="Редактировать" placement="top">
                   <el-button
                     text
@@ -175,11 +183,18 @@
 
     <el-empty v-if="!loading && groupedData.length === 0 && ungroupedProjects.length === 0" description="Нет данных" />
 
-    <!-- Floating compare panel -->
+    <!-- Floating action panel -->
     <transition name="float-panel">
-      <div v-if="checkedIds.size === 2" class="float-actions">
-        <span class="float-label">Выбрано: 2</span>
-        <el-button size="small" @click="openCompare">Сравнить</el-button>
+      <div v-if="checkedIds.size >= 1" class="float-actions">
+        <span class="float-label">Выбрано: {{ checkedIds.size }}</span>
+        <el-button
+          size="small"
+          type="primary"
+          :loading="addingToSelection"
+          @click="addToSelection"
+        >Добавить в отбор</el-button>
+        <el-button v-if="canCreateGroup" size="small" @click="showCreateGroup = true">Создать группу</el-button>
+        <el-button v-if="checkedIds.size === 2" size="small" @click="openCompare">Сравнить</el-button>
         <el-button size="small" @click="checkedIds.clear()">Сбросить</el-button>
       </div>
     </transition>
@@ -188,21 +203,30 @@
       v-model="showCompare"
       :project-ids="compareIds"
     />
+
+    <CreateGroupDialog
+      v-model="showCreateGroup"
+      :selected-projects="checkedProjects"
+      @created="() => { checkedIds.clear(); emit('refresh') }"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, markRaw, reactive } from 'vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
-import { Edit, Check, Delete } from '@element-plus/icons-vue'
+import { Edit, Check, Delete, ScaleToOriginal } from '@element-plus/icons-vue'
 import type { ProjectListItem } from '../api/projects'
+import { projectsApi } from '../api/projects'
 import type { GroupListItem } from '../api/groups'
 import { groupsApi } from '../api/groups'
 import ComparisonSideBySide from './ComparisonSideBySide.vue'
+import CreateGroupDialog from './CreateGroupDialog.vue'
 
 const EditIcon = markRaw(Edit)
 const CheckIcon = markRaw(Check)
 const DeleteIcon = markRaw(Delete)
+const CompareIcon = markRaw(ScaleToOriginal)
 
 const props = defineProps<{
   items: ProjectListItem[]
@@ -213,6 +237,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'project-click', id: string): void
   (e: 'refresh'): void
+  (e: 'selection-changed'): void
 }>()
 
 const openGroups = ref<string[]>([])
@@ -235,6 +260,39 @@ function openCompare() {
   const [a, b] = Array.from(checkedIds)
   compareIds.value = [a, b]
   showCompare.value = true
+}
+
+function openGroupCompare(projects: { id: string }[]) {
+  compareIds.value = [projects[0].id, projects[1].id]
+  showCompare.value = true
+}
+
+// Checked projects as full objects
+const checkedProjects = computed(() =>
+  props.items.filter(p => checkedIds.has(p.id))
+)
+
+// Show "Создать группу" only when all checked projects are not in any group
+const canCreateGroup = computed(() =>
+  checkedIds.size >= 2 && checkedProjects.value.every(p => !p.group_id)
+)
+
+const showCreateGroup = ref(false)
+
+const addingToSelection = ref(false)
+
+async function addToSelection() {
+  addingToSelection.value = true
+  try {
+    await Promise.all(Array.from(checkedIds).map(id => projectsApi.select(id)))
+    ElMessage.success(`Добавлено в отбор: ${checkedIds.size}`)
+    checkedIds.clear()
+    emit('selection-changed')
+  } catch {
+    // axios interceptor handles toast
+  } finally {
+    addingToSelection.value = false
+  }
 }
 
 // Edit state
@@ -401,7 +459,16 @@ const groupedData = computed(() => {
     groupMap.get(item.group_id)!.projects.push(item)
   }
 
-  return Array.from(groupMap.values()).sort((a, b) => a.name.localeCompare(b.name))
+  function groupOrder(g: { source: string; is_confirmed: boolean }) {
+    if (g.source === 'manual') return 0
+    if (g.is_confirmed) return 1
+    return 2
+  }
+  return Array.from(groupMap.values()).sort((a, b) => {
+    const diff = groupOrder(a) - groupOrder(b)
+    if (diff !== 0) return diff
+    return a.name.localeCompare(b.name)
+  })
 })
 
 const ungroupedProjects = computed(() =>

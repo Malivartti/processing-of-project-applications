@@ -53,7 +53,9 @@ class GroupRepo:
 
     async def get_projects_by_ids(self, project_ids: list[uuid.UUID]) -> list[Project]:
         result = await self.session.execute(
-            select(Project).where(Project.id.in_(project_ids))
+            select(Project)
+            .options(selectinload(Project.group))
+            .where(Project.id.in_(project_ids))
         )
         return list(result.scalars().all())
 
@@ -133,7 +135,7 @@ class GroupRepo:
         """Delete all groups with given source. Returns count deleted."""
         from sqlalchemy import delete as sa_delete
 
-        q = select(Group.id).where(Group.source == source)
+        q = select(Group.id).where(Group.source == source, Group.is_confirmed == False)  # noqa: E712
         if context is not None:
             q = q.where(Group.context == context)
         ids = list((await self.session.execute(q)).scalars().all())

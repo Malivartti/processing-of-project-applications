@@ -168,6 +168,7 @@
       :loading="store.groupModeLoading"
       @project-click="onProjectClick"
       @refresh="onGroupsRefresh"
+      @selection-changed="onGroupsRefresh"
     />
 
     <!-- Floating action panel (list mode only) -->
@@ -182,6 +183,11 @@
           Сравнить
         </el-button>
         <el-button v-if="checkedRows.length >= 2" type="primary" size="small" @click="openCreateGroup">Создать группу</el-button>
+        <AddToGroupPopover
+          :project-ids="checkedRows.map(r => r.id)"
+          context="main"
+          @done="onAddedToGroup"
+        />
         <el-button size="small" @click="addToSelection">Добавить в отбор</el-button>
         <el-button size="small" @click="clearChecked">Сбросить</el-button>
       </div>
@@ -206,6 +212,7 @@ import GroupingRunDialog from '../components/GroupingRunDialog.vue'
 import GroupingProgressBar from '../components/GroupingProgressBar.vue'
 import ProjectImportDialog from '../components/ProjectImportDialog.vue'
 import ComparisonSideBySide from '../components/ComparisonSideBySide.vue'
+import AddToGroupPopover from '../components/AddToGroupPopover.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -290,6 +297,7 @@ function onGroupingError(message: string) {
 function onImported() {
   store.fetchProjects()
   store.fetchStats()
+  if (store.viewMode === 'groups') store.fetchGroupsMode()
 }
 
 async function clearAutoGroups() {
@@ -355,6 +363,13 @@ async function onGroupCreated() {
   clearChecked()
   store.fetchProjects()
   store.fetchStats()
+}
+
+function onAddedToGroup() {
+  clearChecked()
+  store.fetchProjects()
+  store.fetchStats()
+  if (store.viewMode === 'groups') store.fetchGroupsMode()
 }
 
 // Group color palette
@@ -474,6 +489,7 @@ function onGroupsRefresh() {
 }
 
 function onViewModeChange(mode: ViewMode) {
+  checkedRows.value = []
   store.setViewMode(mode)
   if (mode === 'groups') {
     store.fetchGroupsMode()

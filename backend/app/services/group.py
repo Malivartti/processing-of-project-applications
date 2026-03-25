@@ -145,21 +145,6 @@ class GroupService:
         if not project:
             raise NotFoundError(detail=f"Project {body.project_id} not found")
 
-        p = project[0]
-        if p.group_id is not None and p.group_id != group_id:
-            raise ConflictError(
-                detail={
-                    "message": "Project is already in another group",
-                    "conflicting": [
-                        ConflictingProject(
-                            project_id=p.id,
-                            group_id=p.group_id,
-                            group_name=p.group.name if p.group else "",
-                        ).model_dump(mode="json")
-                    ],
-                }
-            )
-
         await self.repo.add_project(group_id, body.project_id)
         updated = await self.repo.get_by_id(group_id)
         assert updated is not None
