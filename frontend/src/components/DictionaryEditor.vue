@@ -282,6 +282,7 @@ async function handleAdd() {
 }
 
 .tag-row {
+  position: relative;
   display: flex;
   align-items: center;
 }
@@ -290,11 +291,18 @@ async function handleAdd() {
   display: inline-flex;
   align-items: center;
   gap: 0;
+  position: relative;
   border: 1px solid #dcdfe6;
   border-radius: 6px;
   background: #f5f7fa;
   overflow: hidden;
   transition: border-color 0.15s, background 0.15s;
+}
+
+.word-card::before {
+  content: '';
+  width: 59px;
+  flex-shrink: 0;
 }
 
 .word-card:hover {
@@ -315,6 +323,8 @@ async function handleAdd() {
 }
 
 .word-card__label {
+  flex: 1;
+  text-align: center;
   padding: 5px 12px;
   font-size: 14px;
   cursor: pointer;
@@ -328,14 +338,18 @@ async function handleAdd() {
 }
 
 .word-card__actions {
-  display: none;
+  display: inline-flex;
   align-items: center;
   border-left: 1px solid #dcdfe6;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
 }
 
 .word-card:hover .word-card__actions,
 .word-card__actions--visible {
-  display: inline-flex;
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .word-card--editing {
