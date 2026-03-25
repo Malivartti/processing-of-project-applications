@@ -194,6 +194,11 @@
           @click="addToSelection"
         >Добавить в отбор</el-button>
         <el-button v-if="canCreateGroup" size="small" @click="showCreateGroup = true">Создать группу</el-button>
+        <AddToGroupPopover
+          :project-ids="Array.from(checkedIds)"
+          context="main"
+          @done="() => { checkedIds.clear(); emit('refresh') }"
+        />
         <el-button v-if="checkedIds.size === 2" size="small" @click="openCompare">Сравнить</el-button>
         <el-button size="small" @click="checkedIds.clear()">Сбросить</el-button>
       </div>
@@ -222,6 +227,7 @@ import type { GroupListItem } from '../api/groups'
 import { groupsApi } from '../api/groups'
 import ComparisonSideBySide from './ComparisonSideBySide.vue'
 import CreateGroupDialog from './CreateGroupDialog.vue'
+import AddToGroupPopover from './AddToGroupPopover.vue'
 
 const EditIcon = markRaw(Edit)
 const CheckIcon = markRaw(Check)

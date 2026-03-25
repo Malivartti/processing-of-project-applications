@@ -5,9 +5,10 @@
     :width="280"
     trigger="click"
     popper-class="add-to-group-popper"
+    @show="onOpen"
   >
     <template #reference>
-      <el-button size="small" @click="onOpen">Добавить в группу</el-button>
+      <el-button size="small">Добавить в группу</el-button>
     </template>
 
     <div class="atg-content">
@@ -31,20 +32,25 @@
         </el-tooltip>
       </div>
 
-      <div v-if="loadingGroups" class="atg-loading">
+      <!-- First load: spinner -->
+      <div v-if="!everLoaded" class="atg-loading">
         <el-icon class="is-loading"><Loading /></el-icon>
       </div>
 
-      <div v-else-if="filteredGroups.length === 0" class="atg-empty">
+      <div v-else-if="!loadingGroups && filteredGroups.length === 0" class="atg-empty">
         {{ search.trim() ? 'Нет совпадений — нажмите + чтобы создать' : 'Нет ручных групп' }}
       </div>
 
+      <!-- List: always visible after first load, shimmer on refresh -->
       <div v-else class="atg-list">
         <div
           v-for="group in filteredGroups"
           :key="group.id"
           class="atg-item"
-          :class="{ 'atg-item--loading': addingToGroupId === group.id }"
+          :class="{
+            'atg-item--adding': addingToGroupId === group.id,
+            'atg-item--refreshing': loadingGroups,
+          }"
           @click="addToGroup(group.id, group.name)"
         >
           <span class="atg-item-name">{{ group.name }}</span>
@@ -77,6 +83,7 @@ const visible = ref(false)
 const search = ref('')
 const groups = ref<GroupListItem[]>([])
 const loadingGroups = ref(false)
+const everLoaded = ref(false)
 const creating = ref(false)
 const addingToGroupId = ref<string | null>(null)
 const searchInputRef = ref<InputInstance>()
@@ -93,6 +100,7 @@ async function onOpen() {
   try {
     const res = await groupsApi.getAll({ source: 'manual', context: props.context ?? 'main' })
     groups.value = res.items
+    everLoaded.value = true
   } finally {
     loadingGroups.value = false
   }
@@ -187,15 +195,40 @@ function onEnter() {
   cursor: pointer;
   transition: background 0.15s;
   gap: 8px;
+  position: relative;
+  overflow: hidden;
 }
 
 .atg-item:hover {
   background: #f0f7ff;
 }
 
-.atg-item--loading {
+.atg-item--adding {
   opacity: 0.5;
   pointer-events: none;
+}
+
+.atg-item--refreshing {
+  pointer-events: none;
+}
+
+.atg-item--refreshing::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.6) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.2s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 
 .atg-item-name {
