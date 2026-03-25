@@ -105,7 +105,20 @@
           <div v-if="groupProjects.length" class="group-projects">
             <div class="group-projects-label">Другие проекты в группе:</div>
             <ul class="group-projects-list">
-              <li v-for="p in groupProjects" :key="p.id">{{ p.title }}</li>
+              <li v-for="p in groupProjects" :key="p.id" class="group-project-item">
+                <span class="group-project-title" @click="emit('navigate', p.id)">
+                  {{ p.title }}
+                </span>
+                <el-tooltip content="Сравнить с текущим" placement="top">
+                  <el-button
+                    :icon="ScaleToOriginal"
+                    size="small"
+                    text
+                    class="compare-btn"
+                    @click.stop="emit('compare', p.id)"
+                  />
+                </el-tooltip>
+              </li>
             </ul>
           </div>
         </div>
@@ -152,7 +165,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from "vue";
 import { ElMessage } from "element-plus";
-import { QuestionFilled } from "@element-plus/icons-vue";
+import { QuestionFilled, ScaleToOriginal } from "@element-plus/icons-vue";
 import { projectsApi, type ProjectRead, type GroupInfo } from "../api/projects";
 import { groupsApi, type GroupRead } from "../api/groups";
 import HighlightedText from "./HighlightedText.vue";
@@ -165,6 +178,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   close: [];
   updated: [];
+  navigate: [id: string];
+  compare: [id: string];
 }>();
 
 const visible = ref(false);
@@ -380,16 +395,36 @@ async function removeFromGroup() {
 
 .group-projects-list {
   margin: 0;
-  padding-left: 18px;
+  padding: 0;
+  list-style: none;
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.group-projects-list li {
+.group-project-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  justify-content: space-between;
+}
+
+.group-project-title {
   font-size: 13px;
-  color: #606266;
+  color: #409eff;
+  cursor: pointer;
   line-height: 1.4;
+  flex: 1;
+}
+
+.group-project-title:hover {
+  text-decoration: underline;
+}
+
+.compare-btn {
+  flex-shrink: 0;
+  padding: 2px;
+  color: #909399;
 }
 
 .drawer-actions {

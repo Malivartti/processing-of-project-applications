@@ -5,6 +5,8 @@
       :search-keywords="searchKeywords"
       @close="selectedProjectId = null"
       @updated="onPanelUpdated"
+      @navigate="selectedProjectId = $event"
+      @compare="onCompareFromPanel"
     />
 
     <CreateGroupDialog
@@ -228,6 +230,12 @@ function clearChecked() {
 function openCompare() {
   if (checkedRows.value.length !== 2) return
   compareIds.value = [checkedRows.value[0].id, checkedRows.value[1].id]
+  showCompare.value = true
+}
+
+function onCompareFromPanel(otherId: string) {
+  if (!selectedProjectId.value) return
+  compareIds.value = [selectedProjectId.value, otherId]
   showCompare.value = true
 }
 
