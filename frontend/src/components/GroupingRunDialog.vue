@@ -11,7 +11,7 @@
       <el-button
         v-for="preset in PRESETS"
         :key="preset.value"
-        :type="threshold === preset.value ? 'primary' : 'default'"
+        :type="thresholdPct === preset.value ? 'primary' : 'default'"
         size="small"
         @click="applyPreset(preset.value)"
       >
@@ -19,12 +19,12 @@
       </el-button>
     </el-button-group>
 
-    <div class="section-label" style="margin-top: 20px">Порог схожести: {{ threshold.toFixed(2) }}</div>
+    <div class="section-label" style="margin-top: 20px">Порог схожести: {{ thresholdPct }}</div>
     <el-slider
-      v-model="threshold"
-      :min="0.5"
-      :max="0.95"
-      :step="0.01"
+      v-model="thresholdPct"
+      :min="0"
+      :max="100"
+      :step="1"
       :show-tooltip="false"
       style="padding: 0 8px"
     />
@@ -32,11 +32,11 @@
     <div class="manual-input-row">
       <span class="manual-input-label">Точное значение:</span>
       <el-input-number
-        v-model="threshold"
-        :min="0.5"
-        :max="0.95"
-        :step="0.01"
-        :precision="2"
+        v-model="thresholdPct"
+        :min="0"
+        :max="100"
+        :step="1"
+        :precision="0"
         controls-position="right"
         size="small"
         style="width: 120px"
@@ -44,9 +44,9 @@
     </div>
 
     <div class="hint">
-      Строгий (0.85) — меньше групп, высокая точность.<br />
-      Средний (0.75) — сбалансированный режим.<br />
-      Мягкий (0.65) — больше групп, выше охват.
+      Строгий (70) — меньше групп, высокая точность.<br />
+      Средний (50) — сбалансированный режим.<br />
+      Мягкий (30) — больше групп, выше охват.
     </div>
 
     <template #footer>
@@ -60,12 +60,12 @@
 import { ref, watch } from 'vue'
 
 const PRESETS = [
-  { label: 'Строгий (0.85)', value: 0.85 },
-  { label: 'Средний (0.75)', value: 0.75 },
-  { label: 'Мягкий (0.65)', value: 0.65 },
+  { label: 'Строгий (70)', value: 70 },
+  { label: 'Средний (50)', value: 50 },
+  { label: 'Мягкий (30)', value: 30 },
 ]
 
-const LS_KEY = 'grouping_threshold'
+const LS_KEY = 'grouping_threshold_pct'
 
 interface Props {
   modelValue: boolean
@@ -77,19 +77,19 @@ const emit = defineEmits<{
   start: [threshold: number]
 }>()
 
-function loadThreshold(): number {
+function loadThresholdPct(): number {
   const saved = localStorage.getItem(LS_KEY)
   if (saved !== null) {
-    const parsed = parseFloat(saved)
-    if (!isNaN(parsed) && parsed >= 0.5 && parsed <= 0.95) {
+    const parsed = parseInt(saved, 10)
+    if (!isNaN(parsed) && parsed >= 0 && parsed <= 100) {
       return parsed
     }
   }
-  return 0.75
+  return 50
 }
 
 const visible = ref(props.modelValue)
-const threshold = ref(loadThreshold())
+const thresholdPct = ref(loadThresholdPct())
 
 watch(
   () => props.modelValue,
@@ -103,12 +103,12 @@ watch(visible, (val) => {
 })
 
 function applyPreset(value: number) {
-  threshold.value = value
+  thresholdPct.value = value
 }
 
 function onConfirm() {
-  localStorage.setItem(LS_KEY, String(threshold.value))
-  emit('start', threshold.value)
+  localStorage.setItem(LS_KEY, String(thresholdPct.value))
+  emit('start', thresholdPct.value / 100)
   visible.value = false
 }
 

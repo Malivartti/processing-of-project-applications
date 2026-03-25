@@ -28,7 +28,7 @@
 
       <el-table-column label="Порог" width="90" align="center">
         <template #default="{ row }">
-          {{ row.threshold.toFixed(2) }}
+          {{ Math.round(row.threshold * 100) }}
         </template>
       </el-table-column>
 

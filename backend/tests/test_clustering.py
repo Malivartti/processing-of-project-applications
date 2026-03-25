@@ -5,8 +5,47 @@ from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
+from sklearn.metrics.pairwise import cosine_similarity
 
 from app.services.clustering import ClusteringService, run_auto_grouping
+
+# ---------------------------------------------------------------------------
+# ClusteringService.center_embeddings
+# ---------------------------------------------------------------------------
+
+
+class TestCenterEmbeddings:
+    def test_output_shape_preserved(self):
+        embeddings = np.random.rand(10, 312).astype(np.float32)
+        result = ClusteringService.center_embeddings(embeddings)
+        assert result.shape == (10, 312)
+
+    def test_output_is_unit_normalized(self):
+        embeddings = np.random.rand(8, 312).astype(np.float32)
+        result = ClusteringService.center_embeddings(embeddings)
+        norms = np.linalg.norm(result, axis=1)
+        np.testing.assert_allclose(norms, np.ones(8), atol=1e-5)
+
+    def test_reduces_mean_similarity(self):
+        """Mean-centering should lower the average pairwise cosine similarity."""
+        rng = np.random.default_rng(0)
+        # Simulate BERT-style cone: all vectors close to a shared mean direction
+        mean_dir = rng.standard_normal(312).astype(np.float32)
+        mean_dir /= np.linalg.norm(mean_dir)
+        vecs = np.stack([
+            (mean_dir + rng.standard_normal(312).astype(np.float32) * 0.3)
+            for _ in range(20)
+        ])
+        vecs /= np.linalg.norm(vecs, axis=1, keepdims=True)
+
+        raw_sim = cosine_similarity(vecs)
+        centered = ClusteringService.center_embeddings(vecs)
+        centered_sim = cosine_similarity(centered)
+
+        # Exclude diagonal
+        mask = ~np.eye(20, dtype=bool)
+        assert raw_sim[mask].mean() > centered_sim[mask].mean()
+
 
 # ---------------------------------------------------------------------------
 # ClusteringService.cosine_similarity_matrix
@@ -211,13 +250,13 @@ def _make_session_returning(projects, rejected_pairs=None, old_groups=None):
 class TestRunAutoGrouping:
     def test_not_enough_projects_returns_zeros(self):
         session = _make_session_returning(projects=[])
-        result = run_auto_grouping(session, threshold=0.75, context="main")
+        result = run_auto_grouping(session, threshold=0.75, context="main", extra_stopwords=set())
         assert result == {"projects_processed": 0, "groups_found": 0, "projects_in_groups": 0}
 
     def test_one_project_returns_zeros(self):
         p = _make_mock_project()
         session = _make_session_returning(projects=[p])
-        result = run_auto_grouping(session, threshold=0.75, context="main")
+        result = run_auto_grouping(session, threshold=0.75, context="main", extra_stopwords=set())
         assert result["projects_processed"] == 1
         assert result["groups_found"] == 0
         assert result["projects_in_groups"] == 0
@@ -236,7 +275,7 @@ class TestRunAutoGrouping:
 
         projects = [_make_mock_project(embedding=make_near(v)) for _ in range(3)]
         session = _make_session_returning(projects=projects)
-        result = run_auto_grouping(session, threshold=0.75, context="main")
+        result = run_auto_grouping(session, threshold=0.75, context="main", extra_stopwords=set())
         assert result["projects_processed"] == 3
         assert result["groups_found"] == 1
         assert result["projects_in_groups"] == 3
@@ -246,5 +285,5 @@ class TestRunAutoGrouping:
         p = _make_mock_project()
         session = _make_session_returning(projects=[p])
         run_id = uuid.uuid4()
-        result = run_auto_grouping(session, threshold=0.75, context="main", grouping_run_id=run_id)
+        result = run_auto_grouping(session, threshold=0.75, context="main", grouping_run_id=run_id, extra_stopwords=set())
         assert result["projects_processed"] == 1

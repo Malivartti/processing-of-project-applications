@@ -40,7 +40,7 @@ class GroupingStatusResponse(BaseModel):
 
 
 class GroupingRunStartRequest(BaseModel):
-    threshold: float = Field(default=0.75, ge=0.5, le=0.95)
+    threshold: float = Field(default=0.30, ge=0.0, le=1.0)
     context: str = "main"
 
 

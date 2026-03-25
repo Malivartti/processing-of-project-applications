@@ -10,7 +10,6 @@ from app.config import settings
 from app.models import Project
 from app.services.embedding import EmbeddingService
 from app.tasks.celery_app import celery, get_embedding_model
-from app.utils.text import TextProcessingUtils
 
 
 def _get_sync_session() -> Session:
@@ -47,13 +46,18 @@ def bulk_generate_embeddings(project_ids: list[str]) -> dict:
             return {"processed": 0}
 
         svc = EmbeddingService(model)
-        texts = [
-            TextProcessingUtils.prepare_text(
-                p.title, p.relevance, p.problem, p.goal, p.key_tasks, p.expected_result
-            )
+        fields_list = [
+            {
+                "title": p.title or "",
+                "relevance": p.relevance or "",
+                "problem": p.problem or "",
+                "goal": p.goal or "",
+                "key_tasks": p.key_tasks or "",
+                "expected_result": p.expected_result or "",
+            }
             for p in projects
         ]
-        vectors = svc.encode(texts)
+        vectors = svc.encode_weighted(fields_list)
 
         for project, vector in zip(projects, vectors):
             project.embedding = vector.tolist()

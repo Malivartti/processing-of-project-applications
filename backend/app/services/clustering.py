@@ -40,6 +40,21 @@ def _generate_group_name(
 
 class ClusteringService:
     @staticmethod
+    def center_embeddings(embeddings: np.ndarray) -> np.ndarray:
+        """Subtract the corpus mean and re-normalize each vector.
+
+        rubert-tiny2 (and most BERT-based models) place all embeddings in a
+        narrow cone: raw cosine similarities between unrelated Russian texts
+        are typically 0.65-0.75. Mean-centering spreads the vectors across
+        the full space, making similarities much more discriminative.
+        """
+        mean = embeddings.mean(axis=0)
+        centered = embeddings - mean
+        norms = np.linalg.norm(centered, axis=1, keepdims=True)
+        norms = np.where(norms < 1e-8, 1.0, norms)
+        return centered / norms
+
+    @staticmethod
     def cosine_similarity_matrix(embeddings: np.ndarray) -> np.ndarray:
         """Compute pairwise cosine similarity matrix (N x N, values in [-1, 1])."""
         return cosine_similarity(embeddings)
@@ -86,7 +101,7 @@ class ClusteringService:
         model = AgglomerativeClustering(
             n_clusters=None,
             metric="precomputed",
-            linkage="average",
+            linkage="complete",
             distance_threshold=1.0 - threshold,
         )
         labels = model.fit_predict(distance_matrix)
@@ -189,8 +204,13 @@ def run_auto_grouping(
     # 3. Build embedding matrix
     embeddings = np.array([p.embedding for p in projects], dtype=np.float32)
 
-    # 4. Compute similarity matrix and apply rejected pairs
-    sim_matrix = ClusteringService.cosine_similarity_matrix(embeddings)
+    # 4. Compute similarity matrix and apply rejected pairs.
+    # Center embeddings before computing similarity: rubert-tiny2 places all
+    # Russian text vectors in a narrow cone (raw median similarity ~0.72),
+    # making raw cosine scores undiscriminating. Mean-centering + re-normalization
+    # spreads the distribution and makes similarities meaningful.
+    centered = ClusteringService.center_embeddings(embeddings)
+    sim_matrix = ClusteringService.cosine_similarity_matrix(centered)
     sim_matrix = ClusteringService.apply_rejected_pairs(sim_matrix, project_ids, rejected_set)
 
     if progress_callback is not None:
