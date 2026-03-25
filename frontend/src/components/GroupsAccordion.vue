@@ -128,9 +128,6 @@
               <el-tag v-if="project.direction_name" size="small" effect="plain" type="info">
                 {{ project.direction_name }}
               </el-tag>
-              <el-tag :type="project.is_ongoing ? 'info' : 'success'" size="small">
-                {{ project.is_ongoing ? 'Бессрочный' : 'Срочный' }}
-              </el-tag>
               <el-tag v-if="project.is_selected" type="warning" size="small">В отборе</el-tag>
               <el-tag v-else-if="project.is_auto_checked" type="success" size="small">Проверен</el-tag>
               <el-tag v-else type="info" size="small">Новый</el-tag>
@@ -166,9 +163,6 @@
             <div class="project-tags">
               <el-tag v-if="project.direction_name" size="small" effect="plain" type="info">
                 {{ project.direction_name }}
-              </el-tag>
-              <el-tag :type="project.is_ongoing ? 'info' : 'success'" size="small">
-                {{ project.is_ongoing ? 'Бессрочный' : 'Срочный' }}
               </el-tag>
               <el-tag v-if="project.is_selected" type="warning" size="small">В отборе</el-tag>
               <el-tag v-else-if="project.is_auto_checked" type="success" size="small">Проверен</el-tag>
