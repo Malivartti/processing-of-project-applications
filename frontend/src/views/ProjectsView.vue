@@ -62,6 +62,15 @@
           <el-button size="small" @click="showImportDialog = true">Импорт</el-button>
           <el-button
             size="small"
+            type="warning"
+            plain
+            :loading="clearingAutoGroups"
+            @click="clearAutoGroups"
+          >
+            Очистить авто группы
+          </el-button>
+          <el-button
+            size="small"
             type="danger"
             plain
             :loading="clearingAll"
@@ -188,6 +197,7 @@ import type { TableInstance } from 'element-plus'
 import { useProjectsStore, type ProjectsFilters, type ViewMode } from '../stores/projects'
 import { projectsApi, type ProjectListItem } from '../api/projects'
 import { groupingApi } from '../api/grouping'
+import { groupsApi } from '../api/groups'
 import ProjectFilters from '../components/ProjectFilters.vue'
 import ProjectDetailPanel from '../components/ProjectDetailPanel.vue'
 import CreateGroupDialog from '../components/CreateGroupDialog.vue'
@@ -214,6 +224,7 @@ const showCompare = ref(false)
 const compareIds = ref<[string, string] | null>(null)
 const activeRunId = ref<string | null>(null)
 const clearingAll = ref(false)
+const clearingAutoGroups = ref(false)
 
 function onSelectionChange(rows: ProjectListItem[]) {
   checkedRows.value = rows
@@ -279,6 +290,35 @@ function onGroupingError(message: string) {
 function onImported() {
   store.fetchProjects()
   store.fetchStats()
+}
+
+async function clearAutoGroups() {
+  try {
+    await ElMessageBox.confirm(
+      'Будут удалены все авто группы. Проекты останутся в системе. Продолжить?',
+      'Очистить авто группы',
+      {
+        confirmButtonText: 'Удалить',
+        cancelButtonText: 'Отмена',
+        type: 'warning',
+        confirmButtonClass: 'el-button--danger',
+      },
+    )
+  } catch {
+    return
+  }
+  clearingAutoGroups.value = true
+  try {
+    const deleted = await groupsApi.deleteAllAuto('main')
+    ElMessage.success(`Удалено авто групп: ${deleted}`)
+    store.fetchProjects()
+    store.fetchStats()
+    if (store.viewMode === 'groups') store.fetchGroupsMode()
+  } catch {
+    // axios interceptor handles toast
+  } finally {
+    clearingAutoGroups.value = false
+  }
 }
 
 async function clearAllProjects() {

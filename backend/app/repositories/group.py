@@ -129,6 +129,23 @@ class GroupRepo:
             self.session.add_all(pairs)
             # no commit here — caller commits after remove_project
 
+    async def delete_all_by_source(self, source: GroupSource, context: GroupContext | None = None) -> int:
+        """Delete all groups with given source. Returns count deleted."""
+        from sqlalchemy import delete as sa_delete
+
+        q = select(Group.id).where(Group.source == source)
+        if context is not None:
+            q = q.where(Group.context == context)
+        ids = list((await self.session.execute(q)).scalars().all())
+        if not ids:
+            return 0
+        await self.session.execute(
+            update(Project).where(Project.group_id.in_(ids)).values(group_id=None)
+        )
+        await self.session.execute(sa_delete(Group).where(Group.id.in_(ids)))
+        await self.session.commit()
+        return len(ids)
+
     async def save_rejected_pairs_for_group(self, project_ids: list[uuid.UUID]) -> None:
         """Save rejected pairs for all pairs within a group being deleted."""
         pairs = [

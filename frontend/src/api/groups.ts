@@ -76,6 +76,13 @@ export const groupsApi = {
     await apiClient.delete(`/groups/${id}`)
   },
 
+  async deleteAllAuto(context?: string): Promise<number> {
+    const { data } = await apiClient.delete<{ deleted: number }>('/groups', {
+      params: context ? { context } : {},
+    })
+    return data.deleted
+  },
+
   async confirm(id: string): Promise<GroupRead> {
     const { data } = await apiClient.post<GroupRead>(`/groups/${id}/confirm`)
     return data

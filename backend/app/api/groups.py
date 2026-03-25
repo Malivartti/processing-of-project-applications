@@ -32,6 +32,16 @@ async def list_groups(
     )
 
 
+@router.delete("", status_code=200)
+async def delete_auto_groups(
+    context: GroupContext | None = None,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    svc = GroupService(db)
+    deleted = await svc.delete_all_auto(context=context.value if context else None)
+    return {"deleted": deleted}
+
+
 @router.post("", response_model=GroupRead, status_code=201)
 async def create_group(
     body: GroupCreate,

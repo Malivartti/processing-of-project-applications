@@ -124,6 +124,12 @@ class GroupService:
         if not deleted:
             raise NotFoundError(detail=f"Group {group_id} not found")
 
+    async def delete_all_auto(self, context: str | None = None) -> int:
+        from app.models import GroupContext
+
+        ctx = GroupContext(context) if context else None
+        return await self.repo.delete_all_by_source(GroupSource.auto, context=ctx)
+
     async def confirm_group(self, group_id: uuid.UUID) -> GroupRead:
         group = await self.repo.confirm(group_id)
         if group is None:
