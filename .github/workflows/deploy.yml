@@ -169,13 +169,13 @@ jobs:
 
           ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
             cd ${{ secrets.SSH_TARGET_DIR }} && \
-            docker compose -f docker-compose.prod.yaml pull && \
-            docker compose -f docker-compose.prod.yaml up -d --remove-orphans
+            docker-compose -f docker-compose.prod.yaml pull && \
+            docker-compose -f docker-compose.prod.yaml up -d --remove-orphans
           "
 
       - name: Verify deployment
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
             cd ${{ secrets.SSH_TARGET_DIR }} && \
-            docker compose -f docker-compose.prod.yaml ps
+            docker-compose -f docker-compose.prod.yaml ps
           "
