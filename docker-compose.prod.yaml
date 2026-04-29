@@ -143,12 +143,6 @@ services:
       - traefik.http.routers.${STACK_NAME}-nginx-https.entrypoints=https
       - traefik.http.routers.${STACK_NAME}-nginx-https.tls=true
       - traefik.http.routers.${STACK_NAME}-nginx-https.tls.certresolver=le
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost/api/health || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
     depends_on:
       backend:
         condition: service_healthy
